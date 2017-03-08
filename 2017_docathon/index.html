@@ -1,0 +1,387 @@
+<!--
+
+Documentation best practices
+
+- Just do it. The end
+
+- code style (self documenting code
+- comments
+- docstrings
+- tutorial documentation (example notebook, sphinx website)
+
+
+- Make it a habit
+- State the obvious* (* obvious at the time you are writing that code, but not a few months later)
+
+
+-->
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Documentation - best practices and tools</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle, inverse
+
+# Documentation
+## Best practices and tools
+
+Joris Van den Bossche - docathon 2017
+
+https://jorisvandenbossche.github.io/talks/2017_docathon
+
+---
+class: right, middle
+background-image: url(img/SuccessKid.jpg)
+background-size: cover
+
+<p style="font-size: 600%; font-weight: bold">JUST  <br>DO IT !</p>
+
+
+---
+
+# Why is it important?
+
+* For **users**
+  * You want people to use your code
+
+* For **developers / contributors**
+  * You want people to help out
+  * It makes your code better
+
+---
+class: center, middle
+
+## For **YOU**: you will be using and developing your code in 6 months
+
+---
+class: middle
+
+>  *"Good documentation helps people understand code. This makes the code more reusable and lowers maintenance costs [47]. As a result, code that is well documented makes it easier to transition when the graduate students and postdocs who have been writing code in a lab transition to the next career phase"*
+
+.small[.right[From: *Best Practices for Scientific Computing*, Wilson et al (http://dx.doi.org/10.1371/journal.pbio.1001745)]]
+
+---
+
+# Many forms of documentation
+
+* Code style: readability, comments
+
+* Embedded documentation: docstrings
+
+* API documentation
+
+* Tutorial documentation (example notebook, sphinx website)
+
+* Interactive help vs online html docs vs pdf docs
+
+---
+
+# Code readability
+
+### *Code is read many more times than written!*
+
+In many cases, that person is probably going to be you, six months from now.
+
+--
+count: false
+
+```python
+def rmse(x, y):
+    return np.sqrt(((x-y)**2).mean())
+```
+
+---
+
+# Code readability
+
+### *Code is read many more times than written!*
+
+In many cases, that person is probably going to be you, six months from now.
+
+```python
+def root_mean_square_error(observed, modelled):
+    residuals = observed - modelled
+    # some clarifying comment
+    return np.sqrt((residuals**2).mean())
+```
+
+---
+
+# Docstrings
+
+What does a function do? How do I use it? What are the arguments I need to provide? What are the default values?
+
+```python
+def root_mean_square_error(observed, modelled):
+    residuals = observed - modelled
+    return np.sqrt((residuals**2).mean())
+```
+
+---
+
+# Docstrings
+
+What does a function do? How do I use it? What are the arguments I need to provide? What are the default values?
+
+```python
+def root_mean_square_error(observed, modelled):
+    """
+    Root Mean Square Error (RMSE)
+
+    Parameters
+    -----------
+    observed : np.ndarray or pd.DataFrame
+        observed/measured values of the variable
+    observed : np.ndarray or pd.DataFrame
+        simulated values of the variable
+
+    Notes
+    -------
+    * range: [0, inf]
+    * optimum: 0
+    """
+    residuals = observed - modelled
+    return np.sqrt((residuals**2).mean())
+```
+
+
+
+---
+
+### Numpydoc: Numpy Docstring Standard
+
+```python
+"""Very brief one-line function description.
+
+A more extended description about the function...
+...which can take multiple lines if required
+
+Parameters
+----------
+inputname1 : type of inputname1
+    description of the first input
+...
+
+Returns
+-------
+out1 : dtype of output
+    description of the first output
+...
+
+Notes
+-----
+Some information about your function,...
+
+Examples
+--------
+....
+"""
+```
+
+---
+count: false
+
+### Numpydoc: Numpy Docstring Standard
+
+```python
+"""Very brief one-line function description.
+
+A more extended description about the function...
+...which can take multiple lines if required
+
+Parameters
+----------
+inputname1 : type of inputname1
+    description of the first input
+...
+"""
+```
+
+More extensive examples: http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html
+
+And the docstrings of most scientific python projects!
+
+???
+
+Show in notebook, and online! (numpy docs -> nice formatting)
+
+---
+class: middle
+
+
+> *"The best way to create and maintain reference documentation is to **embed the
+> documentation for a piece of software in that software (7c)**.
+> Doing this increases the probability that when programmers change the code,
+> they will update the documentation at the same time."*
+
+.small[.right[From: *Best Practices for Scientific Computing*, Wilson et al (http://dx.doi.org/10.1371/journal.pbio.1001745)]]
+
+
+---
+
+# Tutorials / user guides
+
+Beyond docstrings: how can I use the package in a specific analysis pipeline?
+How can I put all the pieces together to form a script or program?
+
+--
+count: false
+
+* Jupyter notebooks
+
+* Examples and galleries
+
+* Tutorials, guides
+
+--
+count: false
+
+### Online HTML docs using Sphinx
+
+---
+
+![:scale 100%](img/sphinx-logo.png)
+
+* *"tool that makes it easy to create intelligent and beautiful documentation"*
+
+* Originally created for the Python documentation, now used by many projects
+
+* Uses the reStructuredText markup language
+
+.right[http://www.sphinx-doc.org/]
+
+???
+
+Show a quickstart
+
+Show the biointense docs
+
+---
+
+# reStructuredText
+
+
+* Good intro: sphinx's [reStructuredText Primer](http://www.sphinx-doc.org/en/stable/rest.html)
+
+```rst
+The plain text markup let's you write in **bold** or *italic*,
+mark ``code``,
+
+* use
+* lists
+
+Define titles
+-------------
+
+Make code blocks:
+
+    a = 1
+```
+
+* Similar to markdown, but more powerful for complex documentation (cross references to other sections, to function definitions, extensions, ...)
+
+
+---
+
+# Some other links:
+
+* Read the Docs (https://readthedocs.org/): documentation hosting
+
+* Doctr (https://drdoctr.github.io/doctr/): a tool for automatically deploying docs from Travis CI to GitHub pages.
+
+* MkDocs (http://www.mkdocs.org/): project documentation with Markdown.
+
+* Sphinx-Gallery (http://sphinx-gallery.readthedocs.io/): Sphinx extension for automatic generation of an example gallery
+
+
+---
+
+# Yet some other links (and acknowledgement!)
+
+* http://www.writethedocs.org
+
+* https://jacobian.org/writing/great-documentation/
+
+* https://www.slideshare.net/NelleV/docathon-how-to-write-good-documentation
+
+---
+
+# Take away
+
+### Make it a habit; do it while coding
+
+### Add README's, docstrings to functions
+
+### State the obvious\*
+
+#### \* obvious at the time you are writing that code, but not a few months later
+
+--
+count: false
+
+### When sharing/publishing packages: use tools like sphinx for online html docs
+
+---
+
+# Contribute to documentation
+
+* You are a user of a package, you are a consumer of its documentation. Encounter something incorrect or unclear? Improve it!
+
+* Pick a function. Complete the docstring.
+
+* Be an "editor"
+
+* Most projects have issues labeled as documenation issues, easy issues, ...
+
+
+---
+
+## Getting started with contributing
+
+http://pandas.pydata.org/pandas-docs/stable/contributing.html
+
+* Creating a development environment
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
