@@ -1,0 +1,261 @@
+<!--
+
+Introduction to pandas
+
+
+- why python for scientific computing / data analysis -> whole ecosystem
+- pandas: when working with tabular data (think excel, sql, )
+    -> but can work with these interactively, or automate, or integrate with whole ecosystem
+
+- showcase
+  - often used in preprocessing for further analysis
+  - but also for exploring data -> that is about looking your data, and answering questions about your data
+  => eg titanic data: whas there a difference in survival ratio for the different classes?
+  => eg was there a decrease in concentrations (can then of course further analyse this, see if decrease is significant),
+        or what is the distribution? different stations?
+        how does the daily profile look like?
+        and does this differ between weekday and weekendday?
+
+  - we can do that in few lines of code
+
+
+- go over a few topics in a bit more detail
+
+    1. input / output (and do with titanic dataset)
+
+    2, exploration (see data, plot data, general statistics about the data)
+
+    3. filtering data / Selecting data
+
+        column or columns
+
+        filtering df[condition]
+
+    2. groupby
+
+    3. resample / timeseries
+
+    4. reshape
+
+    5. join / merge ?
+
+
+
+Laat een aantal oefeningen / zaken in de notebook staan die de mensen nog kunnen uitvoeren
+maar die ik oversla in deze presentatie
+
+(solutions behind button -> like continuum notebooks)
+
+
+
+-->
+
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Introduction to Pandas</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Introduction to Pandas
+
+Inria, May 18, 2017
+
+Joris Van den Bossche
+
+https://jorisvandenbossche.github.io/talks/2017_INRIA_pandas
+
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+---
+
+# Why Python for data analysis?
+
+### High level language
+### General purpose
+### Excellent interactive use
+
+--
+count: false
+
+### + a rich ecosystem of tools for scientific computing and data analysis.
+
+
+
+---
+class: center, middle
+
+# Python's scientific ecosystem
+
+
+#### ## Thanks to Jake VanderPlas for the figure
+
+
+
+---
+class: center, middle, bgheader
+background-image: url(img/JakeVdP-ecosystem1.svg)
+background-size: cover
+
+---
+count: false
+class: center, middle, bgheader
+background-image: url(img/JakeVdP-ecosystem2.svg)
+background-size: cover
+
+---
+count: false
+class: center, middle, bgheader
+background-image: url(img/JakeVdP-ecosystem3.svg)
+background-size: cover
+
+---
+count: false
+class: center, middle, bgheader
+background-image: url(img/JakeVdP-ecosystem4.svg)
+background-size: cover
+
+---
+count: false
+class: center, middle, bgheader
+background-image: url(img/JakeVdP-ecosystem5.svg)
+background-size: cover
+
+
+
+
+---
+class: center, middle
+
+![](img/pandas_logo.svg)
+
+---
+
+## Pandas: data analysis in python
+
+For data-intensive work in Python the [Pandas](http://pandas.pydata.org) library has become essential.
+
+What is `pandas`?
+
+* Pandas can be thought of as *NumPy arrays with labels* for rows and columns, and better support for heterogeneous data types, but it's also much, much more than that.
+* Pandas can also be thought of as `R`'s `data.frame` in Python.
+* Powerful for working with missing data, working with time series data, for reading and writing your data, for reshaping, grouping, merging your data, ...
+
+It's documentation: http://pandas.pydata.org/pandas-docs/stable/
+
+---
+
+# When do you need pandas?
+
+When working with **tabular or structured data** (like R dataframe, SQL table, Excel spreadsheet, ...):
+
+- Import data
+- Clean up messy data
+- Explore data, gain insight into data
+- Process and prepare your data for analysis
+- Analyse your data (together with scikit-learn, statsmodels, ...)
+
+
+---
+
+## Key features
+
+* Fast, easy and flexible input/output for a lot of different data formats
+* Working with missing data (`.dropna()`, `pd.isnull()`)
+* Merging and joining (`concat`, `join`)
+* Grouping: `groupby` functionality
+* Reshaping (`stack`, `pivot`)
+* Powerful time series manipulation (resampling, timezones, ..)
+* Easy plotting
+
+
+
+---
+
+* Interact with your data
+* Import / export for variety of formats
+* Easy plotting
+* Set of powerful methods to maniputlate data
+
+
+
+---
+
+# Further reading
+
+* Pandas documentation: http://pandas.pydata.org/pandas-docs/stable/
+
+* Books
+    * "Python for Data Analysis" by Wes McKinney
+    * "Python Data Science Handbook" by Jake VanderPlas
+
+---
+
+# Further reading
+
+* Tutorials
+  * https://github.com/jorisvandenbossche/pandas-tutorial
+  * https://github.com/brandon-rhodes/pycon-pandas-tutorial
+
+* Tom Augspurger's blog
+  * https://tomaugspurger.github.io/modern-1.html
+
+---
+class: middle
+
+# Thanks for listening!
+
+
+## Those slides:
+
+- [jorisvandenbossche.github.io/talks/2016_INRIA_pandas](
+    http://jorisvandenbossche.github.io/talks/2017_INRIA_pandas)
+
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
