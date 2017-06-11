@@ -1,0 +1,489 @@
+<!--
+
+pandas talk PyParis:
+
+    some new stuff
+        excel output
+        json table schema (get extension working!)
+        interval index
+        parquet, feather
+        ecosystem: dask, ..
+        deprecations -> Panel, ix
+    Those deprecations are part of path to 1.0
+    with view of 2.0
+        what is the vision for that?
+    Many changes coming, we need YOUR input on that
+    Pandas: growth over time (get statistics from page website?), downloads
+        but limited resources, limited core contributors (6 to 10)
+
+How can you help? In your institurion or comparny, or as an individual? * Contribute time ** Give feedback ** Report issues ** Contribute code / PRs * Contribute money ** Donations through NumFocus
+
+Complain -> Complain publicly -> Turn into improvements of the pandas ecosystem / turn into constructive feedback (your most unhappy customers are your greatest learning source) -> we learn from this, but also knows what lives, and can also try to solve those problems
+
+pandas-dev mailing list
+
+contribute -> my first contribution to pandas was ... a typo correction (screenshot) don't hesitate, don't be emabarrased, just do
+
+
+
+
+
+
+-->
+
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Pandas - What's new and what's coming</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Pandas
+
+## What's new and what's coming
+
+Joris Van den Bossche, PyParis, June 12, 2017
+
+https://github.com/jorisvandenbossche/talks/
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+---
+class: center, middle
+
+![:scale 100%](img/pandas_logo.svg)
+
+---
+
+## Pandas: data analysis in python
+
+Targeted at working with **tabular or structured data** (like R dataframe, SQL table, Excel spreadsheet, ...):
+
+- Import and export your data
+- Cleane up messy data
+- Explore data, gain insight into data
+- Process and prepare your data for analysis
+- Analyse your data (together with scikit-learn, statsmodels, ...)
+
+Powerful for working with missing data, working with time series data, for reading and writing your data, for reshaping, grouping, merging your data, ...
+
+It's documentation: http://pandas.pydata.org/pandas-docs/stable/
+
+---
+
+# Pandas 0.20.x
+
+Released beginning of May
+
+Some highlights:
+
+* Deprecation of `ix`
+* Deprecation of `Panel`
+* Styled output to excel
+* JSON table schema
+* IntervalIndex
+* new `agg` method
+* ...
+
+Full release notes: [http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#v0-20-1-may-5-2017](http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#v0-20-1-may-5-2017)
+
+
+---
+
+# Styled output to excel
+
+```python
+>>> styled = (df.style
+...     .applymap(lambda val: 'color: %s' % 'red' if val < 0 else 'black')
+...     .highlight_max())
+
+>>> styled.to_excel('styled.xlsx', engine='openpyxl')
+```
+
+.center[
+![](img/style-excel.png)
+]
+
+---
+
+# JSON Table Schema: better display
+
+```python
+pd.options.display.html.table_schema = True
+```
+
+---
+
+# New `.agg` DataFrame method
+
+Mimicking the existing `df.groupby(..).agg(...)`
+
+Applying custom set of aggregation functions at once:
+
+```python
+>>> df = pd.DataFrame(np.random.randn(4, 2), columns=['A', 'B'])
+>>> df
+          A         B
+0  0.740440 -1.081037
+1 -1.938700  0.851898
+2  1.027494 -0.649469
+3  2.461105 -0.171393
+```
+
+--
+count: false
+
+```python
+>>> df.agg(['min', 'mean', 'max'])
+             A         B
+min  -1.938700 -1.081037
+mean  0.572585 -0.262500
+max   2.461105  0.851898
+```
+
+---
+
+# New `IntervalIndex`
+
+
+
+
+
+---
+
+# Deprecation of `Panel`
+
+### 3D Panel has always been underdeveloped
+
+### Focus on tabular data workflows (1D Series, 2D DataFrame)
+
+### Alternatives
+
+* Multi-Index
+* `xarray`: N-D labeled arrays and datasets in Python (http://xarray.pydata.org)
+
+---
+
+# Deprecation of `ix`
+
+
+```python
+>>> s1 = pd.Series(range(4), index=range(3, 7))
+
+>>> s2 = pd.Series(range(4), index=list('abcd'))
+
+>>> s1
+2    0
+3    1
+4    2
+5    3
+dtype: int64
+
+>>> s2
+a    0
+b    1
+c    2
+d    3
+dtype: int64
+```
+
+---
+# Deprecation of `ix`
+
+### Positional or label-based?
+
+```python
+>>> s1.ix[1:3]
+.
+.
+.
+
+>>> s2.ix[1:3]
+.
+.
+.
+
+```
+
+---
+count: false
+
+# Deprecation of `ix`
+
+### Positional or label-based?
+
+```python
+>>> s1.ix[1:3]
+2    0
+3    1
+dtype: int64
+
+>>> s2.ix[1:3]
+b    1
+c    2
+dtype: int64
+```
+
+--
+count: false
+
+### Use `iloc` or `loc` instead !
+
+
+---
+
+# Towards pandas 1.0
+
+Clarification public API, deprecations, clean-up inconsistencies
+
+-> effort to move towards a more stable pandas 1.0
+
+---
+
+# Broader ecosystem
+
+
+
+---
+
+
+
+# Apache Arrow
+
+
+---
+
+# `to_parquet` / `read_parquet`
+
+
+
+---
+
+# Pandas 2.0
+
+* Fixing long-standing limitations or inconsistencies in missing data (null values in integer and boolean data, and a more consistent notion of null / NA).
+* Improved performance and utilization of multicore systems.
+* Better user control / visibility of memory usage.
+* Clearer semantics around non-NumPy data types, and permitting new pandas-only data types to be added.
+* Exposing a “libpandas” C/C++ API to other Python library developers.
+
+More information about this can be found in the “pandas 2.0” design documents: https://pandas-dev.github.io/pandas2/index.html
+
+
+???
+
+Beginning “pandas 2.0”
+–
+ Planning significant refactoring of the internals
+–
+ Goals: make pandas
+●
+ Faster and use less memory
+●
+ Fix long-standing limitations / inconsistencies
+●
+ Easier interoperability / extensibility
+
+
+
+---
+
+# Pandas 1.0, 2.0, ....
+
+... are ideas. A lot of work is needed (code, design, ..). We need YOUR help.
+
+... will impact users. We need YOUR input on that.
+
+---
+
+
+???
+
+Those deprecations are part of path to 1.0
+with view of 2.0
+    what is the vision for that?
+Many changes coming, we need YOUR input on that
+Pandas: growth over time (get statistics from page website?), downloads
+    but limited resources, limited core contributors (6 to 10)
+
+
+
+
+    How can you help? In your institurion or comparny, or as an individual? * Contribute time ** Give feedback ** Report issues ** Contribute code / PRs * Contribute money ** Donations through NumFocus
+
+    Complain -> Complain publicly -> Turn into improvements of the pandas ecosystem / turn into constructive feedback (your most unhappy customers are your greatest learning source) -> we learn from this, but also knows what lives, and can also try to solve those problems
+
+    pandas-dev mailing list
+
+    contribute -> my first contribution to pandas was ... a typo correction (screenshot) don't hesitate, don't be emabarrased, just do
+
+
+
+---
+
+# How can you help?
+
+--
+count: false
+
+## Complain!
+
+---
+count: false
+
+# How can you help?
+
+## ~~Complain!~~
+
+## Complain publicly!
+
+---
+count: false
+
+# How can you help?
+
+## ~~Complain!~~
+
+## ~~Complain publicly!~~
+
+## Turn this into constructive feedback / improvements of the pandas ecosystem
+
+---
+
+# How can you help?
+
+## Contribute feedback
+
+## Contribute code
+
+---
+
+## My first contribution to pandas
+
+--
+count: false
+
+![:scale 100%](img/first-contribution.png)
+
+--
+count: false
+
+### ... and now I am a pandas core dev
+
+---
+
+# How can you help?
+
+## Contribute feedback
+
+## Contribute code
+
+## Employ pandas developers / allow employers to contribute
+
+---
+
+## Employ pandas developers
+
+.center[
+.affiliations[
+  ![:scale 40%](img/continuum-logo.png)
+  ![:scale 50%](img/twosigma-logo.png)
+  ![:scale 35%](img/inria-logo.png)
+]
+]
+---
+
+# How can you help?
+
+## Contribute feedback
+
+## Contribute code
+
+## Employ pandas developers / allow employers to contribute
+
+--
+
+## Donate
+
+http://pandas.pydata.org/donate.html
+
+
+---
+
+# Further reading
+
+* Pandas documentation: http://pandas.pydata.org/pandas-docs/stable/
+
+* Books
+    * "Python for Data Analysis" by Wes McKinney
+    * "Python Data Science Handbook" by Jake VanderPlas
+
+---
+
+# Further reading
+
+* Tutorials
+  * https://github.com/jorisvandenbossche/pandas-tutorial
+  * https://github.com/brandon-rhodes/pycon-pandas-tutorial
+
+* Tom Augspurger's blog
+  * https://tomaugspurger.github.io/modern-1.html
+
+---
+class: middle
+
+# Thanks for listening!
+
+
+## Those slides:
+
+- [jorisvandenbossche.github.io/talks/2016_INRIA_pandas](
+    http://jorisvandenbossche.github.io/talks/2017_INRIA_pandas)
+
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
