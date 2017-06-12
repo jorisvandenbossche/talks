@@ -117,6 +117,9 @@ Full release notes: [http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#v
 
 # Styled output to excel
 
+--
+count: false
+
 ```python
 >>> styled = (df.style
 ...     .applymap(lambda val: 'color: %s' % 'red' if val < 0 else 'black')
@@ -131,11 +134,33 @@ Full release notes: [http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#v
 
 ---
 
-# JSON Table Schema: better display
+# JSON Table Schema
+
+### Potential for better, more interactive display of DataFrames
+
+http://specs.frictionlessdata.io/json-table-schema/
 
 ```python
 pd.options.display.html.table_schema = True
 ```
+
+---
+
+# JSON Table Schema
+
+.center[
+![:scale 80%](img/json_table_schema.gif)
+]
+
+https://github.com/gnestor/jupyterlab_table
+
+https://github.com/nteract/nteract/issues/1572
+
+???
+
+Table Schema
+
+A simple format to declare a schema for tabular data. The schema is designed to be expressible in JSON.
 
 ---
 
@@ -170,8 +195,50 @@ max   2.461105  0.851898
 
 # New `IntervalIndex`
 
+New Index type, with underlying `interval tree` implementation
+
+>  *"It allows one to efficiently find all intervals that overlap with any given interval or point"*
+> (Wikipedia on Interval trees)
+
+Think: records that have start and stop values.
+
+--
+count: false
+
+```python
+>>> index = pd.IntervalIndex.from_arrays(left=[0, 1, 2], right=[10, 5, 3],
+...                                      closed='left')
+>>> index
+IntervalIndex([[0, 10), [1, 5), [2, 3)]
+              closed='left',
+              dtype='interval[int64]')
+```
+
+---
+
+# New `IntervalIndex`
 
 
+
+```python
+>>> s = pd.Series(list('abc'), index)
+>>> s
+[0, 10)    a
+[1, 5)     b
+[2, 3)     c
+dtype: object
+```
+
+Efficient indexing of non-sorted or overlapping intervals:
+
+```python
+>>> s.loc[1.5]
+[0, 10)    a
+[1, 5)     b
+dtype: object
+```
+
+Output of `pd.cut`, gridded data, genomics, ...
 
 
 ---
@@ -182,10 +249,15 @@ max   2.461105  0.851898
 
 ### Focus on tabular data workflows (1D Series, 2D DataFrame)
 
+--
+count: false
+
 ### Alternatives
 
 * Multi-Index
 * `xarray`: N-D labeled arrays and datasets in Python (http://xarray.pydata.org)
+
+http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dsintro-deprecate-panel
 
 ---
 
@@ -193,15 +265,15 @@ max   2.461105  0.851898
 
 
 ```python
->>> s1 = pd.Series(range(4), index=range(3, 7))
+>>> s1 = pd.Series(range(4), index=range(1, 5))
 
 >>> s2 = pd.Series(range(4), index=list('abcd'))
 
 >>> s1
-2    0
-3    1
-4    2
-5    3
+1    0
+2    1
+3    2
+4    3
 dtype: int64
 
 >>> s2
@@ -222,12 +294,13 @@ dtype: int64
 .
 .
 .
+.
 
 >>> s2.ix[1:3]
 .
 .
 .
-
+.
 ```
 
 ---
@@ -239,14 +312,16 @@ count: false
 
 ```python
 >>> s1.ix[1:3]
-2    0
-3    1
+1    0
+2    1
+3    2
 dtype: int64
 
 >>> s2.ix[1:3]
 b    1
 c    2
 dtype: int64
+
 ```
 
 --
@@ -259,11 +334,24 @@ count: false
 
 # Towards pandas 1.0
 
-Clarification public API, deprecations, clean-up inconsistencies
+### Clarification public API, deprecations, clean-up inconsistencies
 
--> effort to move towards a more stable pandas 1.0
+http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#reorganization-of-the-library-privacy-changes
+
+--
+count: false
+
+### -> continuing effort to move towards a **more stable pandas 1.0**
+
+--
+count: false
+
+### But: accumulated technical debt, known limitations, ... -> 1.0 is not an end-point
 
 ---
+
+
+???
 
 # Broader ecosystem
 
@@ -275,18 +363,57 @@ Clarification public API, deprecations, clean-up inconsistencies
 
 # Apache Arrow
 
+Standards and tools for in-memory, columnar data layouts
+
+![:scale 49%](img/arrow_copy2.png)
+![:scale 49%](img/arrow_shared2.png)
+
+Source: https://arrow.apache.org/
+
 
 ---
 
 # `to_parquet` / `read_parquet`
 
+Apache Parquet: efficient columnar storage format (https://parquet.apache.org/)
+
+Python bindings with `pyarrow` or `fastparquet`
+
+```python
+>>> import pyarrow.parquet as pq
+>>> table = pq.read_table('example.parquet')
+>>> df = table.to_pandas()
+```
+
+--
+count: false
+
+In future (https://github.com/pandas-dev/pandas/pull/15838):
+
+```python
+>>> import pandas as pd
+>>> df = pd.read_parquet('example.parquet')
+>>> df.to_parquet('example.parquet')
+```
 
 
 ---
 
 # Pandas 2.0
 
-* Fixing long-standing limitations or inconsistencies in missing data (null values in integer and boolean data, and a more consistent notion of null / NA).
+### Planning significant refactoring of the internals
+
+### Goals: make pandas ...
+
+* Faster and use less memory
+* Fix long-standing limitations / inconsistencies
+* Easier interoperability / extensibility
+
+---
+
+# Pandas 2.0
+
+* Fixing long-standing limitations or inconsistencies (e.g. in missing data).
 * Improved performance and utilization of multicore systems.
 * Better user control / visibility of memory usage.
 * Clearer semantics around non-NumPy data types, and permitting new pandas-only data types to be added.
@@ -294,32 +421,31 @@ Clarification public API, deprecations, clean-up inconsistencies
 
 More information about this can be found in the “pandas 2.0” design documents: https://pandas-dev.github.io/pandas2/index.html
 
+---
 
-???
+### Increasing user base
 
-Beginning “pandas 2.0”
-–
- Planning significant refactoring of the internals
-–
- Goals: make pandas
-●
- Faster and use less memory
-●
- Fix long-standing limitations / inconsistencies
-●
- Easier interoperability / extensibility
+.center[
+![:scale 80%](img/pandas_pypi_downloads.png)
+]
 
+--
+count: false
+
+### Only ca 6 - 10 regular contributors
 
 
 ---
 
 # Pandas 1.0, 2.0, ....
 
-... are ideas. A lot of work is needed (code, design, ..). We need YOUR help.
+### ... are ideas.
 
-... will impact users. We need YOUR input on that.
+A lot of work is needed (code, design, ..). We need YOUR help.
 
----
+### ... will impact users.
+
+We need YOUR input on that.
 
 
 ???
@@ -341,7 +467,6 @@ Pandas: growth over time (get statistics from page website?), downloads
     pandas-dev mailing list
 
     contribute -> my first contribution to pandas was ... a typo correction (screenshot) don't hesitate, don't be emabarrased, just do
-
 
 
 ---
@@ -371,7 +496,14 @@ count: false
 
 ## ~~Complain publicly!~~
 
-## Turn this into constructive feedback / improvements of the pandas ecosystem
+### Turn this into constructive feedback / improvements of the pandas ecosystem
+
+--
+count: false
+
+[https://github.com/pandas-dev/pandas/issues](https://github.com/pandas-dev/pandas/issues)
+
+[https://mail.python.org/pipermail/pandas-dev/](https://mail.python.org/pipermail/pandas-dev/)
 
 ---
 
@@ -407,7 +539,7 @@ count: false
 
 ---
 
-## Employ pandas developers
+# Employ pandas developers
 
 .center[
 .affiliations[
@@ -430,43 +562,58 @@ count: false
 
 ## Donate
 
+
+---
+
+# Donate
+
+.center[
+![:scale 80%](img/NumFocus_LRG.png)
+]
+
+https://www.numfocus.org/
+
 http://pandas.pydata.org/donate.html
 
-
 ---
 
-# Further reading
+# How can you help?
 
-* Pandas documentation: http://pandas.pydata.org/pandas-docs/stable/
+## Contribute feedback
 
-* Books
-    * "Python for Data Analysis" by Wes McKinney
-    * "Python Data Science Handbook" by Jake VanderPlas
+## Contribute code
 
----
+## Employ pandas developers / allow employers to contribute
 
-# Further reading
+## Donate
 
-* Tutorials
-  * https://github.com/jorisvandenbossche/pandas-tutorial
-  * https://github.com/brandon-rhodes/pycon-pandas-tutorial
-
-* Tom Augspurger's blog
-  * https://tomaugspurger.github.io/modern-1.html
 
 ---
 class: middle
 
 # Thanks for listening!
 
+## Thanks to all contributors!
 
 ## Those slides:
 
-- [jorisvandenbossche.github.io/talks/2016_INRIA_pandas](
-    http://jorisvandenbossche.github.io/talks/2017_INRIA_pandas)
+- https://github.com/jorisvandenbossche/talks/
+- [jorisvandenbossche.github.io/talks/2017_PyParis_pandas](
+    http://jorisvandenbossche.github.io/talks/2017_PyParis_pandas)
 
 
+---
+# About me
 
+Joris Van den Bossche
+
+- PhD bio-science engineer, air quality research
+- pandas core dev
+- Currently working at the Paris-Saclay Center for Data Science (Inria)
+
+https://github.com/jorisvandenbossche
+
+[@jorisvdbossche](https://twitter.com/jorisvdbossche)
 
 
     </textarea>
