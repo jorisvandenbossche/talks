@@ -27,6 +27,11 @@ h3 {
 
 li {
   font-size: 120%;
+  line-height: 180%;
+}
+
+li li {
+  font-size: 100%;
   line-height: 160%;
 }
 
