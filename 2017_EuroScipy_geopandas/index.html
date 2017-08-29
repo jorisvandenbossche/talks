@@ -135,30 +135,49 @@ https://github.com/jorisvandenbossche/talks/
 ---
 class: center, middle
 
-# GeoPandas
+#  Geospatial data
 
-##  Geospatial data in Python made easy
+<!--
+
+# Geospatial data
+
+Geospatial data is everywhere -->
+
 
 ---
-class: center, middle
+
+background-image: url(img/us_census_density.jpg)
+
+---
+class: center
+
+![:scale 100%](img/inbo_bird_tracking.png)
+
+.credits[
+Bird tracking. From [slides](https://speakerdeck.com/peterdesmet/fly-my-pretties-fly-exploring-visualizing-and-publishing-bird-tracking-data) by Peter Desmet (INBO)
+]
+
+---
+class: center
+
+![:scale 90%](img/pickups_dropoffs_narrow.jpg)
+
+.credits[
+NYC taxi data (pick-up and drop-off locations), from [blog post](https://medium.com/towards-data-science/if-taxi-trips-were-fireflies-1-3-billion-nyc-taxi-trips-plotted-b34e89f96cfa) by Ravi Shekhar]
+
+---
+# Raster vs vector data
+
+
+![:scale 49%](img/raster_example.png)
+![:scale 49%](img/vector_example.png)
+
+--
 count: false
 
-# GeoPandas
-
-##  **Geospatial data** in Python made easy
-
-
----
-
-## Geospatial data
-
-
-
-
----
-# Vector vs raster data
-
-
+.right[
+### -> in this talk: focus on vector data
+]
 
 ???
 
@@ -167,6 +186,10 @@ Two major families of geospatial data
 raster: grid based (topology lacking, difficult to link to tabular data)
 vector: coordinate based objects, topological
 
+here: vector
+
+vector -> common abstraction model in many software
+Open Geospatial consortium standard
 
 ---
 
@@ -193,7 +216,7 @@ but before talking about geopandas, first a bit more general about open source g
 
 
 WKT / WKB encodings for those simple features
----
+
 
 # geospatial software
 
@@ -210,6 +233,9 @@ class: middle, center
 ![:scale 70%](img/Open_Source_Geospatial_Foundation.svg)
 ]
 
+???
+
+OSGeo was created to support the collaborative development of open source geospatial software, and promote its widespread use.
 
 ---
 
@@ -249,10 +275,8 @@ GDAL is a translator library for raster and vector geospatial data formats. As a
 ![:scale 100%](img/gdal_users)
 ]
 
-.bottom[
 .credits[
 Slide from "GDAL 2.2 What's new?" by Even Rouault (CC BY-SA)
-]
 ]
 
 ---
@@ -272,10 +296,12 @@ Used under the hood by many applications (QGIS, PostGIS, MapServer, GRASS, GeoDj
 [geos.osgeo.org](http://geos.osgeo.org)
 
 
----
+<!-- ---
 # PROJ.4
 
+C library for performing conversions between cartographic projections.
 
+[http://proj4.org/](http://proj4.org/) -->
 
 ---
 
@@ -317,24 +343,17 @@ count:false
 count: false
 
 ```python
->>> line.buffer(1).contains(point)
+>>> poly.contains(point)
 True
 ```
 
----
-
----
+???
 
 # Shapely
 
 typical predicates and operations
 
 (images from shapely docs)
-
-
----
-
-
 
 
 ---
@@ -375,18 +394,23 @@ See [static version](http://nbviewer.jupyter.org/github/jorisvandenbossche/talks
 * Element-wise spatial predicates (intersects, within, ...) and operations (intersection, union, difference, ..) (shapely)
 * Re-project your data (pyproj)
 * Quickly visualize the geometries (matplotlib, descartes)
-* More advanced spatial operations: spatial joins and overlays
+* More advanced spatial operations: spatial joins and overlays (rtree)
 
 ---
 
 # Ecosystem
 
-geoplot, cartopy (projection), osm, leaflet / folium, ...
-pysal, geopy
-rasterio
-rtree
+[geoplot](http://www.residentmar.io/geoplot/index.html), [cartopy](http://scitools.org.uk/cartopy/)
 
+leaflet / folium, ...
 
+[OSMnx](http://geoffboeing.com/2016/11/osmnx-python-street-networks/): python for street networks
+
+[PySAL](http://pysal.readthedocs.io/en/latest/index.html): Python Spatial Analysis Library
+
+[rasterio](https://mapbox.github.io/rasterio/): working with geospatial raster data
+
+...
 
 ---
 class: middle, center
@@ -506,7 +530,7 @@ Feedback and polishing needed!
 
 See https://github.com/geopandas/geopandas/issues/473
 
-Build new versin (needs GEOS and shapely already installed):
+Build new version (needs GEOS and shapely already installed):
 
 * clone https://github.com/geopandas/geopandas
 * checkout 'geopandas-cython' branch
