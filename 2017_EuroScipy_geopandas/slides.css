@@ -154,6 +154,27 @@ code {
   clear: both;
 }
 
+.left-column {
+    width: 40%;
+    float: left;
+    font-size: 120%;
+}
+.right-column {
+    width: 56%;
+    float: left;
+    font-size: 120%;
+}
+.right-column {
+    float: right;
+}
+.left-column {
+    float: left;
+}
+.reset-column {
+    overflow: auto;
+    width: 100%;
+
+
 /*
 @page {
   size: 1024px 768px;
