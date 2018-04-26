@@ -1,0 +1,1045 @@
+<!--
+
+### Pandas open source ecosystem
+
+growth python -> data science and pandas at core of this growth
+
+
+ECOSYSTEM
+
+- pandas:
+  - what is the focus of pandas (tabular data, in memory, ...)
+  - general development focus:
+    - new features / enhancements: IO functionality, IntervalIndex, ... (overview of highlights pandas 0.18-0.22)
+    - clean-up API: deprecations of Panel, .ix, 
+  - current improvement areas: extensions
+- ibis: lazy, epxression, familiar interface to other execution engines)
+- dask: scale
+- apache arrow: interoperability (common memory format)
+  - practical current use cases: parquet, IPC (eg dask, ray)
+  - future: shared C++ data science library that can be used by different
+    languages/libraries (including pandas)
+
+OPEN SOURCE PROJECT
+
+- come back to growth python for data science
+- growth in usage of pandas
+    - how many users? -> rough estimate, trends in website visitors, pypi downloads, ...
+  => project management need to scale as well
+- how is it doing currently?
+  - evolution of
+    - number of issues, PRs, activity on github
+    - number of contributors
+
+- how to support this open source community?
+
+- complain, ... (slides PyParis)
+
+=> **engage** in the community
+
+
+estimate of Travis Oliphant (5-10 million users)
+
+
+
+
+Tom's presentation on contributing to pandas
+
+
+-->
+
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>The open source Pandas ecosystem</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+## The open source Pandas ecosystem for tabular data in Python
+
+Joris Van den Bossche, CFM, April 26, 2018
+
+https://github.com/jorisvandenbossche/talks/
+
+[@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+
+---
+# About me
+
+Joris Van den Bossche
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working at the Université Paris-Saclay Center for Data Science (Inria)
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+<div style="margin-bottom:-20px"></div>
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+---
+
+.center[
+![:scale 75%](img/StackOverflow_related_tags_over_time.png)
+
+.small[
+https://stackoverflow.blog/2017/09/14/python-growing-quickly/
+]
+]
+
+???
+
+
+
+
+
+
+
+---
+class: center, middle
+
+![:scale 100%](img/pandas_logo.svg)
+
+---
+
+## Pandas: data analysis in python
+
+Targeted at working with **tabular or structured data** (like R dataframe, SQL table, Excel spreadsheet, ...):
+
+- Import and export your data
+- Clean up messy data
+- Explore data, gain insight into data
+- Process and prepare your data for analysis
+- Analyse your data (together with scikit-learn, statsmodels, ...)
+
+Powerful for working with missing data, working with time series data, for reading and writing your data, for reshaping, grouping, merging your data, ...
+
+Its documentation: http://pandas.pydata.org/pandas-docs/stable/
+
+---
+
+# Key features
+
+* Fast, easy and flexible input/output for a lot of different data formats
+* Working with missing data (`.dropna()`, `.isna()`, `.fillna()`)
+* Merging and joining (`concat`, `join`)
+* Grouping: `groupby` functionality
+* Reshaping (`(un)stack`, `pivot`)
+* Powerful time series manipulation (resampling, timezones, ..)
+* Easy plotting
+
+
+---
+
+Focus of pandas
+
+- tabular (2D, heterogenous)
+- in memory
+
+
+???
+
+- other packages extend this
+- and known: memory can be "big data" on a big machine
+
+
+---
+
+# Current development focus
+
+
+### Bug fixes, new features and enhancements
+
+--
+
+
+
+* IO functionality (Parquet format support, styled excel output, JSON table schema, S3 support, ...)
+* DataFrame.aggregate
+* IntervalIndex
+* ...
+* Coming: extending pandas data types and methods
+
+---
+
+# Current development focus
+
+
+### Bug fixes, new features and enhancements
+
+### Clean-up of the API
+
+--
+
+* Deprecation of `Panel`
+* Deprecation of `.ix`
+* Sum of empty Series
+* Indexing with missing labels
+* ...
+
+
+
+
+???
+
+
+- pandas:
+  - what is the focus of pandas (tabular data, in memory, ...)
+  - general development focus:
+    - new features / enhancements: IO functionality, IntervalIndex, ... (overview of highlights pandas 0.18-0.22)
+    - clean-up API: deprecations of Panel, .ix, 
+  - current improvement areas: extensions
+
+
+
+---
+
+# Towards pandas 1.0
+
+### Clarification public API, deprecations, clean-up inconsistencies
+
+http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#reorganization-of-the-library-privacy-changes
+
+--
+count: false
+
+### -> continuing effort to move towards a **more stable pandas 1.0**
+
+???
+
+### But: accumulated technical debt, known limitations, ... -> 1.0 is not an end-point
+
+
+---
+class: center, middle, inverse
+
+# Tabular data ecosystem
+
+#### ## Selective overview of data-related tools
+
+---
+
+# Extending pandas data types
+
+Ongoing work on an `ExtensionArray` interface: define your own array-like and tell pandas how to work with it.
+
+--
+count: false
+
+Examples with [cyberpandas](https://cyberpandas.readthedocs.io/en/latest/index.html) and [GeoPandas](http://geopandas.readthedocs.io/en/latest/):
+
+```python
+>>> df
+   ID    addresses           location
+0   0  192.168.1.1  POINT (48.8  2.3)
+1   1      0.0.0.0   POINT (51.2 4.4)
+
+>>> df.dtypes
+ID              int64
+addresses          ip
+location     geometry
+dtype: object
+```
+
+---
+count: false
+
+# Extending pandas data types
+
+Ongoing work on an `ExtensionArray` interface: define your own array-like and tell pandas how to work with it.
+
+Examples with [cyberpandas](https://cyberpandas.readthedocs.io/en/latest/index.html) and [GeoPandas](http://geopandas.readthedocs.io/en/latest/):
+
+```python
+>>> df
+   ID    addresses           location
+0   0  192.168.1.1  POINT (48.8  2.3)
+1   1      0.0.0.0   POINT (51.2 4.4)
+
+>>> df.dtypes
+ID              int64
+*addresses          ip
+*location     geometry
+dtype: object
+```
+
+Each of those libraries provide additional type-specific functionality.
+
+
+---
+
+# Scaling pandas workflows
+
+--
+count: false
+
+<div style="margin-bottom:-20px"></div>
+
+![:scale 50%](img/dask_horizontal.svg)
+
+<div style="margin-bottom:-40px"></div>
+
+### Dask is a flexible library for parallelism
+
+* **Parallelizes libraries** like Pandas, NumPy, and SKLearn
+* Lets you work on **larger-than-memory** datasets
+* **Scales** from 1 to 1000's of computers
+* Written in pure Python
+* That leverages the excellent Python ecosystem
+* Using blocked algorithms and task scheduling
+
+---
+
+# Dask.dataframe
+
+.pull-left[
+
+![:scale 100%](img/dask-dataframe.svg)
+
+]
+
+.pull-right[
+
+* Parallel and out-of-core dataframe library
+* Mirrors the Pandas interface
+* Coordinates many Pandas DataFrames into single logical Dask DataFrame
+* Index is (optionally) sorted, allowing for optimizations
+ ]
+
+---
+
+# Dask.dataframe
+.pull-left[
+
+![:scale 100%](img/dask-dataframe.svg)
+
+]
+
+.pull-right[
+
+.mmedium[
+```python
+import pandas as pd
+df = pd.read_csv('2015-01-01.csv')
+res = df.groupby('user_id').mean()
+```
+
+```python
+import dask.dataframe as dd
+df = dd.read_csv('2015-*-*.csv')
+res = df.groupby('user_id').mean()
+res.compute()
+```
+ ]
+]
+
+---
+
+## Ibis: pandas-like deferred expressions
+
+* Write analysis pipeline as deferred expression
+* Remote storage and execution
+* Backends include Impala, PostgreSQL, BigQuery, Pandas, ...
+
+
+http://docs.ibis-project.org/
+
+--
+count: false
+
+.mmedium[
+```python
+github_events = con.table('201801', 'githubarchive:month')
+
+events = github_events[github_events['repo']['name'] == "pandas-dev/pandas"]
+
+counts = (events.groupby(events['created_at'].date().name('date'))
+                .count()
+                .sort_by('date'))
+```
+]
+
+
+---
+
+## Ibis: pandas-like deferred expressions
+
+.mmedium[
+```python
+github_events = con.table('201801', 'githubarchive:month')
+
+events = github_events[github_events['repo']['name'] == "pandas-dev/pandas"]
+
+counts = (events.groupby(events['created_at'].date().name('date'))
+                .count()
+                .sort_by('date'))
+```
+]
+
+--
+count: false
+
+.mmedium[
+```sql
+SELECT
+  DATE(created_at) AS date,
+  count(*) AS count
+FROM githubarchive.month.201801
+WHERE repo.name = 'pandas-dev/pandas'
+GROUP BY
+  date
+ORDER BY
+  date
+```
+]
+
+---
+
+# Apache Arrow
+
+Cross-language development platform for in-memory, columnar data
+
+![:scale 49%](img/arrow_copy2.png)
+![:scale 49%](img/arrow_shared2.png)
+
+Source: https://arrow.apache.org/
+
+???
+
+- apache arrow: interoperability (common memory format)
+  - practical current use cases: parquet, IPC (eg dask, ray)
+  - future: shared C++ data science library that can be used by different
+    languages/libraries (including pandas)
+
+---
+
+# Apache Arrow
+
+Practical use cases *now*:
+
+* Projects can share functionality (eg, Parquet-to-Arrow reader, ODBC connection)
+* Pandas: `to_parquet` / `read_parquet` for the Parquet file format (https://parquet.apache.org/)
+* Interprocess communication (e.g. Dask, Ray) and cross-system communication (e.g. PySpark)
+
+--
+count: false
+
+And in the *future*:
+
+* Shared Arrow-native computational libraries 
+* Foundations for evolution of pandas
+
+???
+
+# Pandas 2.0
+
+### Planning significant refactoring of the internals
+
+### Goals: make pandas ...
+
+* Faster and use less memory
+* Fix long-standing limitations / inconsistencies
+* Easier interoperability / extensibility
+
+
+# Pandas 2.0
+
+* Fixing long-standing limitations or inconsistencies (e.g. in missing data).
+* Improved performance and utilization of multicore systems.
+* Better user control / visibility of memory usage.
+* Clearer semantics around non-NumPy data types, and permitting new pandas-only data types to be added.
+* Exposing a “libpandas” C/C++ API to other Python library developers.
+
+More information about this can be found in the “pandas 2.0” design documents: https://pandas-dev.github.io/pandas2/index.html
+
+---
+
+class: center, middle, inverse
+
+
+# Pandas: an open source package and community
+
+
+---
+
+# Pandas is built by a community
+
+![:scale 32%](img/contributors1.png)
+![:scale 32%](img/contributors2.png)
+![:scale 32%](img/contributors3.png)
+
+.right[
+### ... and 1,119 more contributors.
+]
+
+
+---
+
+# An increasing user base ...
+
+.center[
+![:scale 80%](img/pypi-downloads-pandas.png)
+]
+
+
+---
+
+## ... gives increasing maintenance cost
+
+.center[
+![:scale 80%](img/github-pandas-events.png)
+]
+
+
+---
+
+# Pandas* development
+
+Main bottleneck are maintainers
+
+* Reviewing pull requests
+* Deciding on design questions
+* Tackling bigger issues
+* Infrastructure work (CI, packaging, ...)
+
+High-quality open source software is not built on hackatons, but needs highly engaged developers
+
+<div style="margin-bottom:120px"></div>
+
+.grey[.right[.small[*The same is true for other open source packages]]]
+
+
+???
+
+to be clear: hackatons and sprints are great to introduce people to contributing to open source, 
+but that alone is not a sustainable way to maintain big open source projects
+
++ note: not to dismiss the many great packages that are actually build (initially) as an evening hack
+
+---
+count: false
+
+
+# Pandas* development
+
+Main bottleneck are maintainers
+
+* Reviewing pull requests
+* Deciding on design questions
+* Tackling bigger issues
+* Infrastructure work (CI, packaging, ...)
+
+High-quality open source software is not built on hackatons, but needs highly engaged developers
+
+### Only ca 6 - 10 regular contributors / reviewers
+
+--
+count: false
+
+### No full time developers (3 part-time)
+
+
+???
+
+Contrast this to the gigantic use and importance for the python data science ecosystem
+
+
+# Pandas 1.0, 2.0, ....
+
+### ... are ideas.
+
+A lot of work is needed (code, design, ..). We need YOUR help.
+
+### ... will impact users.
+
+We need YOUR input on that.
+
+
+???
+
+Those deprecations are part of path to 1.0
+with view of 2.0
+    what is the vision for that?
+Many changes coming, we need YOUR input on that
+Pandas: growth over time (get statistics from page website?), downloads
+    but limited resources, limited core contributors (6 to 10)
+
+
+
+
+    How can you help? In your institurion or comparny, or as an individual? * Contribute time ** Give feedback ** Report issues ** Contribute code / PRs * Contribute money ** Donations through NumFocus
+
+    Complain -> Complain publicly -> Turn into improvements of the pandas ecosystem / turn into constructive feedback (your most unhappy customers are your greatest learning source) -> we learn from this, but also knows what lives, and can also try to solve those problems
+
+    pandas-dev mailing list
+
+    contribute -> my first contribution to pandas was ... a typo correction (screenshot) don't hesitate, don't be emabarrased, just do
+
+
+---
+
+## How can you help as an individual?
+
+--
+count: false
+
+### Complain!
+
+---
+count: false
+
+## How can you help as an individual?
+
+### ~~Complain!~~
+
+### Complain publicly!
+
+---
+count: false
+
+## How can you help as an individual?
+
+### ~~Complain!~~
+
+### ~~Complain publicly!~~
+
+### Engage with the community
+
+Turn this into constructive feedback / improvements of the pandas ecosystem
+
+
+---
+
+# Engage with the community
+
+Community building
+
+- StackOverflow and mailing lists
+- Blogging and talks
+- Meet-ups and sprints
+
+Contribute feedback
+
+- Open bug reports and enhancement requests
+- Join discussions on the mailing list / issues
+
+[https://github.com/pandas-dev/pandas/issues](https://github.com/pandas-dev/pandas/issues)
+
+[https://mail.python.org/pipermail/pandas-dev/](https://mail.python.org/pipermail/pandas-dev/)
+
+
+
+---
+
+# How can you help?
+
+## Engage with the community
+
+## Contribute code
+
+---
+
+## My first contribution to pandas
+
+--
+count: false
+
+![:scale 100%](img/first-contribution.png)
+
+--
+count: false
+
+<div style="margin-bottom:-30px"></div>
+
+### ... and now I am a pandas core dev
+
+
+---
+## How can you help as a company?
+
+--
+count: false
+
+### Allow and encourage employees to engage with the community
+
+???
+
+let employees blog about usage, open issues, go to / speak at conferences or meetups, contribute, ...
+
+---
+## How can you help as a company?
+
+### Allow and encourage employees to engage with the community
+
+### Contribute financially
+
+---
+
+# Donate
+
+.center[
+![:scale 64%](img/NumFocus_LRG.png)
+![:scale 35%](img/ursa_logo_inverted.png)
+]
+
+https://www.numfocus.org/
+
+https://ursalabs.org/
+
+http://pandas.pydata.org/donate.html
+
+---
+
+## How can you help as a company?
+
+### Allow and encourage employees to engage with the community
+
+### Contribute financially
+
+### Employ open source developers (or let employees become one)
+
+
+???
+
+that doesn't need to be full time
+
+give employees that want it time to contribute to the packages they are using
+
+---
+
+# Employ pandas developers
+
+.center[
+.affiliations[
+  ![:scale 40%](img/continuum-logo.png)
+  ![:scale 50%](img/twosigma-logo.png)
+  ![:scale 35%](img/inria-logo.png)
+]
+]
+
+---
+
+# Why engage in open source?
+
+### Quality open source software does not come for free
+
+--
+count: false
+
+### Growth path for engineers
+
+???
+
+- This gives a new dimension to grow for your engineering. Other career perspective than becoming a manager.
+- Help you recruit people, show off the quality of your tech teams.
+
+--
+count: false
+
+### Better knowledge of the technical stack you are using
+
+
+---
+
+# How can you help?
+
+### Engage with the community
+
+### Contribute feedback
+
+### Contribute code
+
+### Employ pandas developers / allow employers to contribute
+
+### Donate
+
+
+---
+class: middle
+
+# Thanks for listening!
+
+## Thanks to all contributors!
+
+## Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+- [jorisvandenbossche.github.io/talks/2018_CFM_pandas](
+    http://jorisvandenbossche.github.io/talks/2018_CFM_pandas)
+
+
+
+---
+
+# Styled output to excel
+
+--
+count: false
+
+```python
+>>> styled = (df.style
+...     .applymap(lambda val: 'color: %s' % 'red' if val < 0 else 'black')
+...     .highlight_max())
+
+>>> styled.to_excel('styled.xlsx', engine='openpyxl')
+```
+
+.center[
+![](img/style-excel.png)
+]
+
+---
+
+# JSON Table Schema
+
+### Potential for better, more interactive display of DataFrames
+
+http://specs.frictionlessdata.io/json-table-schema/
+
+```python
+pd.options.display.html.table_schema = True
+```
+
+---
+
+# JSON Table Schema
+
+.center[
+![:scale 80%](img/json_table_schema.gif)
+]
+
+https://github.com/gnestor/jupyterlab_table
+
+https://github.com/nteract/nteract/issues/1572
+
+???
+
+Table Schema
+
+A simple format to declare a schema for tabular data. The schema is designed to be expressible in JSON.
+
+---
+
+# New `.agg` DataFrame method
+
+Mimicking the existing `df.groupby(..).agg(...)`
+
+Applying custom set of aggregation functions at once:
+
+```python
+>>> df = pd.DataFrame(np.random.randn(4, 2), columns=['A', 'B'])
+>>> df
+          A         B
+0  0.740440 -1.081037
+1 -1.938700  0.851898
+2  1.027494 -0.649469
+3  2.461105 -0.171393
+```
+
+--
+count: false
+
+```python
+>>> df.agg(['min', 'mean', 'max'])
+             A         B
+min  -1.938700 -1.081037
+mean  0.572585 -0.262500
+max   2.461105  0.851898
+```
+
+---
+
+# New `IntervalIndex`
+
+New Index type, with underlying `interval tree` implementation
+
+>  *"It allows one to efficiently find all intervals that overlap with any given interval or point"*
+> (Wikipedia on Interval trees)
+
+Think: records that have start and stop values.
+
+--
+count: false
+
+```python
+>>> index = pd.IntervalIndex.from_arrays(left=[0, 1, 2], right=[10, 5, 3],
+...                                      closed='left')
+>>> index
+IntervalIndex([[0, 10), [1, 5), [2, 3)]
+              closed='left',
+              dtype='interval[int64]')
+```
+
+---
+
+# New `IntervalIndex`
+
+
+
+```python
+>>> s = pd.Series(list('abc'), index)
+>>> s
+[0, 10)    a
+[1, 5)     b
+[2, 3)     c
+dtype: object
+```
+
+Efficient indexing of non-sorted or overlapping intervals:
+
+```python
+>>> s.loc[1.5]
+[0, 10)    a
+[1, 5)     b
+dtype: object
+```
+
+Output of `pd.cut`, gridded data, genomics, ...
+
+
+---
+
+# Deprecation of `Panel`
+
+### 3D Panel has always been underdeveloped
+
+### Focus on tabular data workflows (1D Series, 2D DataFrame)
+
+--
+count: false
+
+### Alternatives
+
+* Multi-Index
+* `xarray`: N-D labeled arrays and datasets in Python (http://xarray.pydata.org)
+
+http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dsintro-deprecate-panel
+
+---
+
+# Deprecation of `ix`
+
+
+```python
+>>> s1 = pd.Series(range(4), index=range(1, 5))
+
+>>> s2 = pd.Series(range(4), index=list('abcd'))
+
+>>> s1
+1    0
+2    1
+3    2
+4    3
+dtype: int64
+
+>>> s2
+a    0
+b    1
+c    2
+d    3
+dtype: int64
+```
+
+---
+# Deprecation of `ix`
+
+### Positional or label-based?
+
+```python
+>>> s1.ix[1:3]
+.
+.
+.
+.
+
+>>> s2.ix[1:3]
+.
+.
+.
+.
+```
+
+---
+count: false
+
+# Deprecation of `ix`
+
+### Positional or label-based?
+
+```python
+>>> s1.ix[1:3]
+1    0
+2    1
+3    2
+dtype: int64
+
+>>> s2.ix[1:3]
+b    1
+c    2
+dtype: int64
+
+```
+
+--
+count: false
+
+### Use `iloc` or `loc` instead !
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        // ratio: "16:9"
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
