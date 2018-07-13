@@ -155,7 +155,7 @@ from sklearn.preprocessing import `StandardScaler`
 
 # transformer
 trans = `StandardScaler`()
-X_train_2 = trans.fit(X_train).`transform`(X_train)
+X_train_2 = trans.`fit`(X_train).`transform`(X_train)
 X_test_2 = trans.`transform`(X_test)
 ```
 
@@ -268,6 +268,16 @@ X = df[['pclass', 'sex', 'age', 'sibsp', 'parch', 'fare', 'embarked']]
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y)
 ```
+
+
+???
+
+- "Hello world" example: 
+    - some numerical columns -> scale
+    - some categorical columns -> one-hot encode
+
+- using the titanic example here for the rest of the talk.
+
 
 ---
 ## "Data science hello world" example
@@ -601,7 +611,7 @@ https://atavory.github.io/ibex/
 from `ibex.`sklearn.linear_model import LogisticRegression
 
 model = LogisticRegression()
-model.fit(X_train, y_train)
+model.fit(X_train_encoded, y_train)
 ```
 
 .small[
@@ -621,7 +631,7 @@ model.fit(X_train, y_train)
 from `ibex.`sklearn.linear_model import LogisticRegression
 
 model = LogisticRegression()
-model.fit(X_train, y_train)
+model.fit(X_train_encoded, y_train)
 ```
 
 ```python
@@ -631,7 +641,7 @@ model.coef_
 <table border="1" class="dataframe"> <thead> <tr style="text-align: right;"> <th></th> <th>pclass</th> <th>age</th> <th>sibsp</th> <th>fare</th> <th>sex_female</th> <th>sex_male</th> <th>embarked_C</th> <th>embarked_Q</th> <th>embarked_S</th> </tr> </thead> <tbody> <tr> <th>0</th> <td>-0.822002</td> <td>-0.45996</td> <td>-0.284547</td> <td>0.016556</td> <td>0.582653</td> <td>-0.582653</td> <td>0.179525</td> <td>-0.044348</td> <td>-0.127387</td> </tr> </tbody> </table>
 
 ```python
-model.predict(X_test)
+model.predict(X_test_encoded)
 ```
 
 .small[
