@@ -9,3 +9,5 @@ EuroScipy geopandas slides: https://jorisvandenbossche.github.io/talks/2017_Euro
 FOSDEM geopandas slides: https://jorisvandenbossche.github.io/talks/2018_FOSDEM_geopandas/#1
 
 GeoPython geopandas slides: https://jorisvandenbossche.github.io/talks/2018_GeoPython_geopandas/#1
+
+Scipy 2018 slides: https://jorisvandenbossche.github.io/talks/2018_Scipy_sklearn_pandas/#1
