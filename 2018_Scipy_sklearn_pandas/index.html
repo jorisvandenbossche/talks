@@ -264,7 +264,13 @@ df.head()
 ```python
 y = df['survived']
 X = df[['pclass', 'sex', 'age', 'sibsp', 'parch', 'fare', 'embarked']]
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y)
 ```
+
+---
+## "Data science hello world" example
 
 ```python
 from sklearn.linear_model import LogisticRegression
@@ -280,26 +286,30 @@ model.fit(X_train, y_test)
   ValueError: could not convert string to float: 'S'
 ```
 ]
----
+--
+count: false
+
+Need encoding:
 
 ```python
 from sklearn.preprocessing import OneHotEncoder
 ohe = OneHotEncoder()
-ohe.fit_transform(df[['sex', 'embarked']])
-
+ohe.fit_transform(X_train[['sex', 'embarked']])
 ```
+
+.small[
+```
+  Traceback
+     ...>
+  ValueError: could not convert string to float: 'S'
+```
+]
+
 
 ---
-count: false
+## "Data science hello world" example
 
-```python
-from sklearn.preprocessing import `OneHotEncoder`
-ohe = OneHotEncoder()
-~~ohe.fit_transform(df[['sex', 'embarked']])~~
-
-```
-
-
+Workarounds:
 ```python
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
@@ -309,33 +319,15 @@ ohe = OneHotEncoder()
 ohe.fit_transform(X['embarked'])
 ```
 
-```python
-TypeError: unorderable types: float() < str()
-```
 
 ```python
->>> X['embarked'].fillna(X['embarked'].value_counts().index[0], inplace=True)
->>> X_encoded = pd.get_dummies(X)
->>> X_encoded
-pclass      age  sibsp  parch      fare  sex_female  sex_male  \
-0          1  29.0000      0      0  211.3375           1         0   
-1          1   0.9167      1      2  151.5500           0         1   
-...      ...      ...    ...    ...       ...         ...       ...   
-1307       3  27.0000      0      0    7.2250           0         1   
-1308       3  29.0000      0      0    7.8750           0         1   
-
-      embarked_C  embarked_Q  embarked_S  
-0              0           0           1  
-1              0           0           1  
-...          ...         ...         ...  
-1307           1           0           0  
-1308           0           0           1  
+X['embarked'].fillna('missing', inplace=True)
+X_encoded = pd.get_dummies(X)
+X_encoded
 ```
+<table border="1" class="dataframe"><thead><tr style="text-align: right;"><th></th><th>pclass</th><th>age</th><th>sibsp</th><th>parch</th><th>fare</th><th>sex_female</th><th>sex_male</th><th>embarked_C</th><th>embarked_Q</th><th>embarked_S</th></tr></thead><tbody><tr><th>0</th><td>1</td><td>29.0000</td><td>0</td><td>0</td><td>211.3375</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td></tr><tr><th>1</th><td>1</td><td>0.9167</td><td>1</td><td>2</td><td>151.5500</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td></tr><tr><th>...</th><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr></tbody></table>
 
-
-
-
-model.predict(X_test)
+=> Workarounds prevent correct use of pipelines
 
 
 ---
@@ -469,6 +461,10 @@ Selecting columns:
 * Boolean mask (eg `df.dtypes == object`)
 * Function that returns one of those
 
+???
+
+function is particilarly useful for automated pipelines like automl (where you want to do the selection depending on the input data)
+
 ---
 count: false
 
@@ -562,7 +558,8 @@ preprocessor.fit_transform(X_train)
 --
 count: false
 
-Shout-out to https://github.com/scikit-learn-contrib/sklearn-pandas that already had a similar feature: `DataFrameMapper` (with the ability the return a DataFrame as output)
+
+Shout-out to https://github.com/scikit-learn-contrib/sklearn-pandas that already had a similar feature: `DataFrameMapper` (with the ability to return a DataFrame as output)
 
 
 ---
@@ -692,13 +689,13 @@ In scikit-learn 0.20:
 * Apply different transformers to different columns (ColumnTransformer) ![:scale 5%](img/ok.jpg)
 
 
-To be further discussed:
+To be further discussed .xsmall[(in decreasing order of likelihood)]:
 
 * Feature names based on column names (`preprocessor.get_feature_names`) ?
 * DataFrame in / DataFrame out for transformers ?
 * Use data type information ?
 * Preserve index/columns information in predictors ?
-* Automatic definition of categorical columns?
+* Automatic definition of categorical columns ?
 
 ???
 
