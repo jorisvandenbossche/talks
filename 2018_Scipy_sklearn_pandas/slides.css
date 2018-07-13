@@ -1,0 +1,225 @@
+@import url(webfont-ubuntu-400-300-100.css);
+@import url(webfont-ubuntu-mono-400-700-400italic.css);
+
+body {
+  font-family: 'Ubuntu';
+  font-weight: normal;
+}
+
+.remark-slide-content {
+  font-size: 24px;
+  padding: 1em 3.5em 1em 3.5em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Ubuntu';
+  font-weight: 300;
+  margin-top: 0;
+}
+
+h1 {
+  margin-top: 0.5em;
+}
+h2 {
+  font-size: 100%;
+  line-height: 150%;
+}
+h3 {
+  font-size: 120%;
+  line-height: 140%;
+}
+
+/* 
+ul > li, ol > li {
+  margin: 0.6em 0;
+} */
+
+/* ul > li > ul > li {
+ font-size: 0.8em;
+} */
+
+
+li {
+  line-height: 160%;
+}
+
+p {
+  line-height: 140%;
+}
+
+.singleimg .middlebelowheader {
+  text-align: center;
+}
+
+.singleimg img {
+  max-width: 90%;
+  max-height: 600px;
+  /*border: 2px solid #ddd;*/
+}
+table {
+  margin: 0 auto 0.8em;
+  border-collapse: collapse;
+}
+td, th {
+  border: 1px solid #ddd;
+  padding: 0.3em 0.5em;
+}
+
+.bgheader h1 {
+  background-color: rgba(0, 0, 0, 0.9);
+  opacity: 50%;
+  padding: 0.5em;
+  color: white;
+  border-radius: .5em;
+}
+.middlebelowheader {
+  /* This fixed size height was found to work well with the slide
+     scaling mechanism of remark.js:
+   */
+  height: 500px;
+  display: table-cell;
+  vertical-align: middle;
+}
+.widespace h2 {
+  line-height: 200%;
+}
+
+.remark-code  {
+  font-size: 90%;
+}
+
+.small .remark-code  {
+  font-size: 80%;
+}
+
+.big .remark-code  {
+  font-size: 250%;
+}
+.remark-code, .remark-inline-code {
+   font-family: 'Ubuntu Mono';
+}
+
+.medium .remark-code  {
+  font-size: 120%;
+}
+
+.mmedium .remark-code  {
+  font-size: 99%;
+}
+
+.affiliations img {
+  /*height: 100px;*/
+  margin: 2em;
+  margin-right: 0.5em;
+  margin-left:0.5em;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.small {
+  font-size: 90%;
+}
+
+.credits {
+  font-style: italic;
+  font-size: 70%;
+}
+
+.bunchoflogos img {
+  max-height: 100px;
+  padding: 1em;
+}
+
+.bunchoflogos p {
+  text-align: center;
+  width: 750px;
+}
+
+a:visited {
+  color: blue;
+}
+
+.inverse a:visited {
+  color: Maroon;
+}
+
+.inverse {
+  background: #272822;
+  color: #777872;
+  text-shadow: 0 0 20px #333;
+}
+.inverse h1, .inverse h2 {
+  color: #f3f3f3;
+}
+
+code {
+  background: #e7e8e2;
+  border-radius: 5px;
+}
+.pull-left {
+  float: left;
+  width: 47%;
+}
+.pull-right {
+  float: right;
+  width: 47%;
+}
+.pull-right ~ p {
+  clear: both;
+}
+
+@page {
+  size: 1024px 768px;
+  margin: 0;
+}
+
+@media print {
+  .remark-slide-scaler {
+    width: 100% !important;
+    height: 100% !important;
+    transform: scale(1) !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+}
+
+
+/* 
+Table styling from Jupyter Notebook
+https://github.com/jupyter/notebook/blob/fb4af909a1b5c44e2dad129a5d4834b33f9e6a4b/notebook/static/notebook/less/renderedhtml.less
+
+*/
+table {
+  margin-left: auto;
+  margin-right: auto;
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+tr, th, td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: 1.0;
+  white-space: nowrap;
+  max-width: 100px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  border: none;
+}
+th {
+  font-weight: bold;
+}
+tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+* + table {margin-top: 1em;}

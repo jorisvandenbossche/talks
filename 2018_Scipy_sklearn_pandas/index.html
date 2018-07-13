@@ -1,0 +1,759 @@
+<!--
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Scikit-learn and tabular data: closing the gap</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Scikit-learn and tabular data: closing the gap
+
+Scipy 2018
+
+Joris Van den Bossche
+
+https://github.com/jorisvandenbossche/talks/
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+---
+
+## About me
+
+Joris Van den Bossche
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working at the Université Paris-Saclay Center for Data Science (Inria)
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+<div style="margin-bottom:-20px"></div>
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+
+---
+class: center, middle
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/KLPtEBokqQ0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+*Mind the Gap! Bridging the pandas – scikit-learn dtype divide* talk by Tom Augspurger (PyData Chicago, 2016)
+
+???
+
+Title of my talk is based on this talk that Tom Augspurger (pandas, dask-ml developer)
+gave two years ago on the difficulty of combining scikit-learn and pandas: the gap between both libraries.
+
+We have been working on making this gap smaller
+
+
+---
+class: center
+
+<div style="margin-bottom:40px"></div>
+
+.center[
+          <img src="img/scikit-learn-logo.png" style="width: 200px;" />
+]
+
+## scikit-learn: Machine learning in Python
+
+--
+count: false
+
+- Popular and widely used package
+- Great documentation
+- Simple and elegant API
+
+???
+
+- 28k stars on GitHub
+- 1000+ contributors
+- 400k/month unique visits on http://scikit-learn.org/
+
+## scikit-learn: API principles
+
+- Consistency
+- Inspection
+- Non-proliferation of classes
+- Composition
+- Sensible defaults
+
+(from http://tomdlt.github.io/decks/2018_pydata/#1)
+
+<!-- ######################### -->
+---
+## Estimator
+```python
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier()
+
+y_pred = model.`fit`(X_train, y_train).`predict`(X_test)
+```
+
+<!-- ######################### -->
+---
+count: false
+
+## Estimator
+```python
+from sklearn.ensemble import `RandomForestClassifier`
+
+model = `RandomForestClassifier`()
+
+y_pred = model.fit(X_train, y_train).predict(X_test)
+```
+
+
+
+<!-- ######################### -->
+---
+## Other estimator
+```python
+from sklearn.linear_model import `LogisticRegression`
+
+model = `LogisticRegression`(C=10)
+
+y_pred = model.fit(X_train, y_train).predict(X_test)
+```
+
+<!-- ######################### -->
+---
+## Transformer
+```python
+from sklearn.preprocessing import `StandardScaler`
+
+# transformer
+trans = `StandardScaler`()
+X_train_2 = trans.fit(X_train).`transform`(X_train)
+X_test_2 = trans.`transform`(X_test)
+```
+
+<!-- ######################### -->
+---
+## Transformer + Classifier
+```python
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+# transformer
+trans = StandardScaler()
+X_train_2 = trans.fit(X_train).transform(X_train)
+X_test_2 = trans.transform(X_test)
+
+# classifier
+model = LogisticRegression(C=10)
+y_pred = model.fit(X_train_2, y_train).predict(X_test_2)
+```
+
+---
+count: false
+
+## Transformer + Classifier
+```python
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+# transformer
+trans = StandardScaler()
+X_train_2 = trans.`fit`(X_train).`transform`(X_train)
+X_test_2 = trans.`transform`(X_test)
+
+# classifier
+model = LogisticRegression(C=10)
+y_pred = model.`fit`(X_train_2, y_train).predict(X_test_2)
+```
+
+<!-- ######################### -->
+---
+## Pipeline !
+```python
+from sklearn.pipeline import `make_pipeline`
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+
+# transformer + classifier
+model = `make_pipeline`(StandardScaler(),
+                      LogisticRegression(C=10))
+
+
+y_pred = model.`fit`(X_train, y_train).predict(X_test)
+```
+
+---
+count: false
+
+## Pipeline !
+```python
+from sklearn.pipeline import `make_pipeline`
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+
+# transformer + classifier
+model = `make_pipeline`(StandardScaler(),
+                      LogisticRegression(C=10))
+
+
+y_pred = model.`fit`(X_train, y_train).predict(X_test)
+```
+
+Pipelines: chaining different preprocessing steps (scaling, feature extraction or selection, ...) and estimator:
+
+- Convenience + robust pipelines
+- Avoid leaking information (cross-validation)
+- Joint parameter selection
+
+???
+
+Fit-transform paradigm ensures train and test-set categories correspond.
+
+<!-- ######################### -->
+---
+class: center, middle
+
+# ... and now in practice with tabular data
+
+
+<!-- ######################### -->
+---
+
+## "Data science hello world" example
+
+Titanic: classification with simple heterogeneous table
+
+```python
+df = pd.read_csv("titanic3.csv")
+df.head()
+```
+<table border="1" class="dataframe">   <thead>     <tr style="text-align: right;">       <th></th>       <th>pclass</th>       <th>survived</th>       <th>sex</th>       <th>age</th>       <th>sibsp</th>       <th>parch</th>       <th>fare</th>       <th>embarked</th>     </tr>   </thead>   <tbody>     <tr>       <th>0</th>       <td>1</td>       <td>1</td>       <td>female</td>       <td>29.0000</td>       <td>0</td>       <td>0</td>       <td>211.3375</td>       <td>S</td>     </tr>     <tr>       <th>1</th>       <td>1</td>       <td>1</td>       <td>male</td>       <td>0.9167</td>       <td>1</td>       <td>2</td>       <td>151.5500</td>       <td>S</td>     </tr>     <tr>       <th>...</th>       <td>...</td>       <td>...</td>       <td>...</td>       <td>...</td>       <td>...</td>       <td>...</td>       <td>...</td>       <td>...</td>     </tr>     <tr>       <th>1307</th>       <td>3</td>       <td>0</td>       <td>male</td>       <td>27.0000</td>       <td>0</td>       <td>0</td>       <td>7.2250</td>       <td>C</td>     </tr>     <tr>       <th>1308</th>       <td>3</td>       <td>0</td>       <td>male</td>       <td>29.0000</td>       <td>0</td>       <td>0</td>       <td>7.8750</td>       <td>S</td>     </tr>   </tbody> </table>
+
+```python
+y = df['survived']
+X = df[['pclass', 'sex', 'age', 'sibsp', 'parch', 'fare', 'embarked']]
+```
+
+```python
+from sklearn.linear_model import LogisticRegression
+
+model = LogisticRegression()
+model.fit(X_train, y_test)
+```
+
+.small[
+```
+  Traceback
+     ...>
+  ValueError: could not convert string to float: 'S'
+```
+]
+---
+
+```python
+from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder()
+ohe.fit_transform(df[['sex', 'embarked']])
+
+```
+
+---
+count: false
+
+```python
+from sklearn.preprocessing import `OneHotEncoder`
+ohe = OneHotEncoder()
+~~ohe.fit_transform(df[['sex', 'embarked']])~~
+
+```
+
+
+```python
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+
+le = LabelEncoder()
+X['embarked'] = le.fit_transform(X['embarked'])
+ohe = OneHotEncoder()
+ohe.fit_transform(X['embarked'])
+```
+
+```python
+TypeError: unorderable types: float() < str()
+```
+
+```python
+>>> X['embarked'].fillna(X['embarked'].value_counts().index[0], inplace=True)
+>>> X_encoded = pd.get_dummies(X)
+>>> X_encoded
+pclass      age  sibsp  parch      fare  sex_female  sex_male  \
+0          1  29.0000      0      0  211.3375           1         0   
+1          1   0.9167      1      2  151.5500           0         1   
+...      ...      ...    ...    ...       ...         ...       ...   
+1307       3  27.0000      0      0    7.2250           0         1   
+1308       3  29.0000      0      0    7.8750           0         1   
+
+      embarked_C  embarked_Q  embarked_S  
+0              0           0           1  
+1              0           0           1  
+...          ...         ...         ...  
+1307           1           0           0  
+1308           0           0           1  
+```
+
+
+
+
+model.predict(X_test)
+
+
+---
+## Problems encountered with tabular data
+
+With scikit-learn 0.19:
+
+* We cannot fully use scikit-learn pipelines
+  * Scikit-learn cannot handle categorical variables
+  * No easy way to apply different transformations on numerical / categorical columns
+
+* Loss of index/columns information of the DataFrame
+
+* Just not easy
+
+???
+
+summary of painpoints
+
+
+---
+class: center, middle
+
+# New developments (0.20) and contrib packages
+
+
+---
+
+## Encoding categorical features
+
+Converting discrete features to (several) numerical features
+
+For example, one-hot or dummy encoding:
+
+.center[
+![:scale 70%](img/onehot.svg)
+]
+
+
+---
+
+## OneHotEncoder and OrdinalEncoder
+
+`OneHotEncoder` was improved to handle categorical string features ([PR 9151](https://github.com/scikit-learn/scikit-learn/pull/9151))
+
+```python
+from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder()
+ohe.fit_transform(X_train[['pclass', 'sex', 'embarked']])
+```
+
+.small[
+```
+  array([[ 0.,  0.,  1., ...,  1.,  0.,  0.],
+         [ 0.,  0.,  1., ...,  0.,  1.,  0.],
+         [ 1.,  0.,  0., ...,  1.,  0.,  0.],
+         ..., 
+         [ 0.,  0.,  1., ...,  0.,  0.,  1.],
+         [ 0.,  1.,  0., ...,  0.,  0.,  1.],
+         [ 1.,  0.,  0., ...,  1.,  0.,  0.]])
+```
+]
+
+http://scikit-learn.org/dev/modules/preprocessing.html#encoding-categorical-features
+
+
+???
+
+still returns 
+
+
+---
+
+## Category Encoders contrib package
+
+
+```python
+from `category_encoders` import OneHotEncoder
+
+ohe = OneHotEncoder(handle_unknown='ignore')
+ohe.fit_transform(X_train[['pclass', 'sex', 'embarked']])
+```
+
+<table border="1" class="dataframe">  <thead><tr style="text-align: right;">  <th></th>  <th>sex_1</th>  <th>sex_2</th>  <th>embarked_1</th>  <th>embarked_2</th>  <th>embarked_3</th>  <th>pclass</th></tr>  </thead>  <tbody><tr>  <th>927</th>  <td>1</td>  <td>0</td>  <td>1</td>  <td>0</td>  <td>0</td>  <td>3</td></tr><tr>  <th>703</th>  <td>1</td>  <td>0</td>  <td>0</td>  <td>1</td>  <td>0</td>  <td>3</td></tr><tr>  <th>...</th>  <td>...</td>  <td>...</td>  <td>...</td>  <td>...</td>  <td>...</td>  <td>...</td></tr><tr>  <th>384</th>  <td>1</td>  <td>0</td>  <td>0</td>  <td>0</td>  <td>1</td>  <td>2</td></tr><tr>  <th>169</th>  <td>0</td>  <td>1</td>  <td>1</td>  <td>0</td>  <td>0</td>  <td>1</td></tr>  </tbody></table>
+
+
+Want more categorical encoders? http://contrib.scikit-learn.org/categorical-encoding/
+
+???
+
+there are many more possible ways to convert your categorical variables into numeric features suited to feed into models. The Category Encoders is a scikit-learn-contrib package that provides a whole suite of scikit-learn compatible transformers for different types of categorical encodings.
+
+
+
+And still => want to only apply this on a subset of the columns => now want to put this in a pipeline
+---
+
+## ColumnTransformer
+
+
+`ColumnTransformer`: applying different transformations to different features in a scikit-learn pipeline ([PR 9012](https://github.com/scikit-learn/scikit-learn/pull/9012))
+
+```python
+make_column_transformer(
+    (column_selection, transformer),
+    (column_selection, transformer),
+    ...
+)
+```
+
+---
+count: false
+
+## ColumnTransformer
+
+
+`ColumnTransformer`: applying different transformations to different features in a scikit-learn pipeline ([PR 9012](https://github.com/scikit-learn/scikit-learn/pull/9012))
+
+```python
+make_column_transformer(
+    (`column_selection`, transformer),
+    (`column_selection`, transformer),
+    ...
+)
+```
+
+Selecting columns:
+
+* List of column names (eg `['col1', 'col2']`)
+* Boolean mask (eg `df.dtypes == object`)
+* Function that returns one of those
+
+---
+count: false
+
+## ColumnTransformer
+
+
+`ColumnTransformer`: applying different transformations to different features in a scikit-learn pipeline ([PR 9012](https://github.com/scikit-learn/scikit-learn/pull/9012))
+
+
+```python
+make_column_transformer(
+    (column_selection, `transformer`),
+    (column_selection, `transformer`),
+    ...
+)
+```
+
+Any transformer (or pipeline of transformers) passed the subset of the data
+
+---
+count: false
+
+## ColumnTransformer
+
+
+`ColumnTransformer`: applying different transformations to different features in a scikit-learn pipeline ([PR 9012](https://github.com/scikit-learn/scikit-learn/pull/9012))
+
+
+```python
+make_column_transformer(
+    (column_selection, transformer),
+    (column_selection, transformer),
+    ...
+)
+```
+
+Fully integrated in scikit-learn (cross-validation, parameter optimization, ..)
+
+---
+
+## ColumnTransformer: titanic example
+<div style="margin-bottom:-20px"></div>
+```python
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+numerical_features = ['age', 'fare']
+numerical_transformer = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+
+categorical_features = ['pclass', 'sex', 'embarked']
+categorical_transformer = make_pipeline(
+    SimpleImputer(strategy='constant'),
+    OneHotEncoder())
+
+preprocessor = make_column_transformer(
+    (numerical_featues, numerical_transformer),
+    (categorical_features, categorical_transformer))
+```
+
+Simple imputer support for categorical features: [PR 11211](https://github.com/scikit-learn/scikit-learn/pull/11211)
+
+???
+
+fully integrated in scikit-learn 
+eg parameter optimization with grid search (for all steps in the pipeline)
+
+
+---
+
+## ColumnTransformer: titanic example
+
+```python
+preprocessor.fit_transform(X_train)
+```
+
+.small[
+```
+  array([[-0.395,  0.091, 0., 1., 0., 1., 0., 1., 0., 0., 0., 1.],
+         [-0.086, -0.489, 0., 0., 1., 1., 0., 0., 1., 0., 0., 0.],
+         [ 1.226, -0.113, 1., 0., 0., 0., 1., 0., 0., 1., 0., 0.],
+         [-0.472, -0.434, 0., 1., 0., 0., 1., 0., 0., 1., 0., 0.],
+         [ 0.917, -0.344, 0., 1., 0., 0., 1., 1., 0., 0., 0., 0.]]
+          ... )
+```
+]
+
+--
+count: false
+
+Shout-out to https://github.com/scikit-learn-contrib/sklearn-pandas that already had a similar feature: `DataFrameMapper` (with the ability the return a DataFrame as output)
+
+
+---
+## Full pipeline
+
+```python
+model = make_pipeline(preprocessor, LogisticRegression())
+model.fit(X_train, y_train)
+model.predict(X_test)
+```
+
+.small[
+```
+  array([0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0,
+         0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0,
+         ...])
+```
+]
+
+```python
+model.named_steps['logisticregression'].coef_
+```
+
+.small[
+```
+  array([[-0.390,  0.061,  0.866, -0.015 , -0.771 , 1.258, -1.179,
+           0.331, -0.068, -0.183, -0.297]])
+```
+]
+
+---
+
+## Ibex: pandas adapters for scikit-learn
+
+Transforms estimators to pandas-aware estimators 
+https://atavory.github.io/ibex/
+
+```python
+from `ibex.`sklearn.linear_model import LogisticRegression
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+```
+
+.small[
+```
+  Adapter[LogisticRegression](C=1.0, class_weight=None, dual=False, fit_intercept=True,
+            intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,
+            penalty='l2', random_state=None, solver='liblinear', tol=0.0001,
+            verbose=0, warm_start=False)
+```
+]
+
+---
+
+## Ibex: pandas adapters for scikit-learn
+
+```python
+from `ibex.`sklearn.linear_model import LogisticRegression
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+```
+
+```python
+model.coef_
+```
+
+<table border="1" class="dataframe"> <thead> <tr style="text-align: right;"> <th></th> <th>pclass</th> <th>age</th> <th>sibsp</th> <th>fare</th> <th>sex_female</th> <th>sex_male</th> <th>embarked_C</th> <th>embarked_Q</th> <th>embarked_S</th> </tr> </thead> <tbody> <tr> <th>0</th> <td>-0.822002</td> <td>-0.45996</td> <td>-0.284547</td> <td>0.016556</td> <td>0.582653</td> <td>-0.582653</td> <td>0.179525</td> <td>-0.044348</td> <td>-0.127387</td> </tr> </tbody> </table>
+
+```python
+model.predict(X_test)
+```
+
+.small[
+```
+  1095    1
+  1023    1
+         ..
+  1254    0
+  397     0
+  Length: 328, dtype: int64
+```
+]
+
+.center[
+.small[https://atavory.github.io/ibex/]
+]
+---
+class: center, middle
+
+# Wrap-up
+
+---
+
+## "Data science hello world" example
+
+```python
+categorical = X.dtype == object
+
+numerical_transformer = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+
+categorical_transformer = make_pipeline(
+    SimpleImputer(strategy='constant'),
+    OneHotEncoder())
+
+preprocessor = make_column_transformer(
+    (~categorical, numerical_transformer),
+    (categorical, categorical_transformer))
+
+model = make_pipeline(preprocessor, LogisticRegression())
+```
+--
+count: false
+
+Pipelines with heterogeneous data: *possible* to construct them explicitly
+
+---
+
+## Scikit-learn with pandas DataFrames
+
+In scikit-learn 0.20:
+
+* (Basic) support for categorical features (encoder, imputers) ![:scale 5%](img/ok.jpg)
+* Apply different transformers to different columns (ColumnTransformer) ![:scale 5%](img/ok.jpg)
+
+
+To be further discussed:
+
+* Feature names based on column names (`preprocessor.get_feature_names`) ?
+* DataFrame in / DataFrame out for transformers ?
+* Use data type information ?
+* Preserve index/columns information in predictors ?
+* Automatic definition of categorical columns?
+
+???
+
+Improved: 
+
+* OneHotEncoder and SimpleImputer support for categorical variables
+* ColumnTransformer
+
+Making pandas first class citizen?
+
+
+
+
+
+---
+class: middle
+
+## Thanks to the scikit-learn community!
+
+# Questions? Feedback?
+
+
+Those slides:
+
+[jorisvandenbossche.github.io/talks/2018_Scipy_sklearn_pandas](
+    http://jorisvandenbossche.github.io/talks/2018_Scipy_sklearn_pandas)
+
+
+???
+
+Thanks to:
+- Paris-Saclay Center for Data Science (Inria)
+- sklearn community
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      var slideshow = remark.create({
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: '4:3',
+      });
+    </script>
+  </body>
+</html>
