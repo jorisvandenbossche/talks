@@ -30,7 +30,7 @@ class: center, middle
 
 # Scikit-learn and tabular data: closing the gap
 
-Scipy 2018
+EuroScipy 2018
 
 Joris Van den Bossche
 
@@ -72,6 +72,9 @@ class: center, middle
 
 Title of my talk is based on this talk that Tom Augspurger (pandas, dask-ml developer)
 gave two years ago on the difficulty of combining scikit-learn and pandas: the gap between both libraries.
+
+Scikit-learn traditionally centered its data model around numpy arrays. However, in an important subset of scikit-learn's use cases, the original data in the machine learning pipeline is tabular: heterogeneously typed and labeled.
+In the meantime, pandas has become very popular, and increasingly used to represent such tabular data, but scikit-learn does not always play well with heterogeneous DataFrames.
 
 We have been working on making this gap smaller
 
@@ -239,7 +242,15 @@ Pipelines: chaining different preprocessing steps (scaling, feature extraction o
 
 ???
 
-Fit-transform paradigm ensures train and test-set categories correspond.
+convenience and robust pipelines:
+
+- sklearn has the concept of "transformers"
+- Fit-transform paradigm ensures train and test-set categories correspond.
+- with pipeline: easier separation of train test data
+- not leaking statistics
+- having everything part of a single pipeline, easier to put into production (when using transform + predict, and not fit! with manual code there might be changes in the data that doesn't work with your model, eg unseen categories can be ignored vs get_dummies cannot do this)
+
+
 
 <!-- ######################### -->
 ---
@@ -296,6 +307,11 @@ model.fit(X_train, y_test)
   ValueError: could not convert string to float: 'S'
 ```
 ]
+
+???
+
+this is to be expected, because actual models need numerical data -> we need to encode
+
 --
 count: false
 
@@ -340,6 +356,10 @@ X_encoded
 => Workarounds prevent correct use of pipelines
 
 
+???
+
+and this is a problem, for all the reasons I have been giving on why you should use pipelines
+
 ---
 ## Problems encountered with tabular data
 
@@ -357,11 +377,14 @@ With scikit-learn 0.19:
 
 summary of painpoints
 
+But we have been working on improving this in the upcoming sklearn 0.20 release
 
 ---
 class: center, middle
 
 # New developments (0.20) and contrib packages
+
+
 
 
 ---
@@ -431,7 +454,7 @@ Want more categorical encoders? http://contrib.scikit-learn.org/categorical-enco
 
 there are many more possible ways to convert your categorical variables into numeric features suited to feed into models. The Category Encoders is a scikit-learn-contrib package that provides a whole suite of scikit-learn compatible transformers for different types of categorical encodings.
 
-
+(binary encoder, target encoder, ...)
 
 And still => want to only apply this on a subset of the columns => now want to put this in a pipeline
 ---
@@ -547,6 +570,124 @@ eg parameter optimization with grid search (for all steps in the pipeline)
 
 
 ---
+count: false
+
+## ColumnTransformer: titanic example
+<div style="margin-bottom:-20px"></div>
+```python
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+*numerical_features = ['age', 'fare']
+numerical_transformer = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+
+*categorical_features = ['pclass', 'sex', 'embarked']
+categorical_transformer = make_pipeline(
+    SimpleImputer(strategy='constant'),
+    OneHotEncoder())
+
+preprocessor = make_column_transformer(
+    (numerical_featues, numerical_transformer),
+    (categorical_features, categorical_transformer))
+```
+
+Simple imputer support for categorical features: [PR 11211](https://github.com/scikit-learn/scikit-learn/pull/11211)
+
+---
+count: false
+
+## ColumnTransformer: titanic example
+<div style="margin-bottom:-20px"></div>
+```python
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+numerical_features = ['age', 'fare']
+*numerical_transformer = make_pipeline(
+*    SimpleImputer(strategy='median'),
+*    StandardScaler())
+
+categorical_features = ['pclass', 'sex', 'embarked']
+categorical_transformer = make_pipeline(
+    SimpleImputer(strategy='constant'),
+    OneHotEncoder())
+
+preprocessor = make_column_transformer(
+    (numerical_featues, numerical_transformer),
+    (categorical_features, categorical_transformer))
+```
+
+Simple imputer support for categorical features: [PR 11211](https://github.com/scikit-learn/scikit-learn/pull/11211)
+
+---
+count: false
+
+## ColumnTransformer: titanic example
+<div style="margin-bottom:-20px"></div>
+```python
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+numerical_features = ['age', 'fare']
+numerical_transformer = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+
+categorical_features = ['pclass', 'sex', 'embarked']
+*categorical_transformer = make_pipeline(
+*    SimpleImputer(strategy='constant'),
+*    OneHotEncoder())
+
+preprocessor = make_column_transformer(
+    (numerical_featues, numerical_transformer),
+    (categorical_features, categorical_transformer))
+```
+
+Simple imputer support for categorical features: [PR 11211](https://github.com/scikit-learn/scikit-learn/pull/11211)
+
+
+---
+count: false
+
+## ColumnTransformer: titanic example
+<div style="margin-bottom:-20px"></div>
+```python
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+numerical_features = ['age', 'fare']
+numerical_transformer = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+
+categorical_features = ['pclass', 'sex', 'embarked']
+categorical_transformer = make_pipeline(
+    SimpleImputer(strategy='constant'),
+    OneHotEncoder())
+
+*preprocessor = make_column_transformer(
+*    (numerical_featues, numerical_transformer),
+*    (categorical_features, categorical_transformer))
+```
+
+Simple imputer support for categorical features: [PR 11211](https://github.com/scikit-learn/scikit-learn/pull/11211)
+
+???
+
+this is not yet a full pipeline (for that need to combine with final estimator in another pipeline), but we can already do our preprocessing with this
+
+
+---
 
 ## ColumnTransformer: titanic example
 
@@ -599,6 +740,17 @@ model.named_steps['logisticregression'].coef_
            0.331, -0.068, -0.183, -0.297]])
 ```
 ]
+
+???
+
+This is great. 
+
+But, as noted before, we now lost information about feature names. 
+
+And especially in combintion with the ColumnTransformer (which can reorder the original columns )
+it can be hard to see which coefficient is corresponding to which feature
+
+one way is to have an improved get_feature_names
 
 ---
 
