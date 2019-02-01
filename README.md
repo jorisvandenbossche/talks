@@ -15,3 +15,6 @@ Scipy 2018 slides: https://jorisvandenbossche.github.io/talks/2018_Scipy_sklearn
 FOSS4G Belgium geopandas slides: https://jorisvandenbossche.github.io/talks/2018_FOSS4GBE_geopandas/#1
 
 PyData Paris geopandas/pandas slides: https://jorisvandenbossche.github.io/talks/2019_PyDataParis_geopandas_extending_pandas/#1
+
+London pandas smmit 2019: https://jorisvandenbossche.github.io/talks/2019_London_pandas_extension_arrays/#1
+
