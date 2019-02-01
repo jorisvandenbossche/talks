@@ -1,0 +1,423 @@
+<!--
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Evolving pandas - easy, fast and scalable geospatial analysis in Python</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+#  Evolving Pandas
+
+## The Pandas extension array interface
+
+European Pandas Summit, London, February 1, 2019<br>
+Joris Van den Bossche
+
+https://github.com/jorisvandenbossche/talks/
+
+[@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+---
+# About me
+
+Joris Van den Bossche
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working at the Université Paris-Saclay Center for Data Science (Inria)
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+<div style="margin-bottom:-20px"></div>
+
+.affiliations[
+  ![:scale 65%](img/logoUPSayPlusCDS_990.png)
+  ![:scale 25%](img/inria-logo.png)
+]
+
+---
+class: middle, center
+
+# Extending Pandas
+# --
+# Subclassing
+
+---
+# Extending Pandas
+
+### Composition versus inheritance
+
+???
+
+extending pandas: we made subclassing possible (there is some geo-specific
+functionality for it), but historically also warned: are you sure you need it?
+There are alternatives: functions that take a dataframe, pipe method, composition
+
+--
+count: false
+
+### Subclassing pandas.DataFrame
+
+
+---
+# Subclassing DataFrame
+
+```python
+class GeoDataFrame(pd.DataFrame):
+
+    _metadata = ['crs', '_geometry_column_name']
+
+    def __init__(self, ...): ...
+
+    @property
+    def _constructor(self):
+        return GeoDataFrame
+
+    # override some methods
+
+    def plot(self, ...):
+        ...
+
+    # add additional geo-specific properties and methods
+
+    @property
+    def geometry(self):
+        ...
+
+```
+
+---
+
+# GeoPandas
+
+Goal: make working with geospatial data easier in Python, with focus on tabular vector data
+
+* Extends pandas to work with vector "simple features" (points, lines, polygons)
+* Combines the power of a whole ecosystem of geo tools with pandas: shapely (GEOS), fiona (GDAL), pyproj (proj.4), rtree, ...
+* Bridge between geospatial packages and the scientific / data science stack 
+
+Documentation: http://geopandas.readthedocs.io/
+
+---
+
+# GeoPandas
+
+Provides a `GeoDataFrame` and `GeoSeries`:
+
+```python
+# reading spatial file formats
+countries = geopandas.read_file("countries.shp")
+
+# additional (element-wise) spatial methods/attributes
+countries.geometry.area
+countries.geometry.contains(london)
+countries.dissolve(by='continent')
+
+# basic plotting
+countries.plot()
+
+# Specific spatial methods such as spatial joins
+geopandas.sjoin(cities, countries, op='within')
+
+...
+```
+
+---
+
+# Limitations subclassing
+
+- Overriding methods is not ideal
+- Certain operations may "loose" the subclass type
+- A DataFrame can only be one class at a time
+- Still limited to pandas/numpy dtypes
+
+--
+
+```python
+>>> gdf
+          name  population                                 geometry
+0         Fiji      920938  (POLYGON ((180 -16.06713266364245, 1...
+1     Tanzania    53950935  POLYGON ((33.90371119710453 -0.95000...
+2    W. Sahara      603253  POLYGON ((-8.665589565454809 27.6564...
+..         ...         ...                                      ...
+>>> gdf.dtypes
+name          object
+population     int64
+*geometry      object
+dtype: object
+```
+
+???
+
+Subclassing has some disadvantages:
+
+* overriding methods can be confusing / surprising
+* can loose your type (conversion to basic DataFrame, you loose functionality)
+
+
+---
+# Extending Pandas
+
+New methods since pandas 0.23:
+
+* Registering custom accessors (for DataFrame, Series and Index)
+* Extension Arrays to add custom data type support to pandas
+
+See more in the [Extending Pandas docs](http://pandas.pydata.org/pandas-docs/stable/extending.html) 
+
+---
+class: center, middle
+
+# Pandas extension array interface
+
+---
+
+# Extending pandas data types
+
+A new Extension Array interface: define your own array-like and tell pandas how to work with it.
+
+--
+count: false
+
+Examples with [cyberpandas](https://cyberpandas.readthedocs.io/en/latest/index.html) and [GeoPandas](http://geopandas.readthedocs.io/en/latest/):
+
+```python
+>>> df
+   ID    addresses           location
+0   0  192.168.1.1  POINT (48.8  2.3)
+1   1      0.0.0.0   POINT (51.2 4.4)
+
+>>> df.dtypes
+ID              int64
+addresses          ip
+location     geometry
+dtype: object
+```
+
+
+
+---
+count: false
+
+# Extending pandas data types
+
+A new Extension Array interface: define your own array-like and tell pandas how to work with it.
+
+Examples with [cyberpandas](https://cyberpandas.readthedocs.io/en/latest/index.html) and [GeoPandas](http://geopandas.readthedocs.io/en/latest/):
+
+```python
+>>> df
+   ID    addresses           location
+0   0  192.168.1.1  POINT (48.8  2.3)
+1   1      0.0.0.0   POINT (51.2 4.4)
+
+>>> df.dtypes
+ID              int64
+*addresses          ip
+*location     geometry
+dtype: object
+```
+
+Each of those libraries provide additional type-specific functionality.
+
+???
+
+the ip addresses is the original use case that made Tom Augspurger start this
+
+
+---
+
+# Motivation
+
+* Pandas historically bound to NumPy's data representation and its limitations
+  * Missing data for non-float dtypes
+  * Categorical data, datetime with timezone, variable-length strings, ...
+  * Nested data such as lists, dicts (json), ...
+
+---
+
+# Motivation
+
+* Pandas historically bound to NumPy's data representation and its limitations
+* The custom types in pandas (Categorical, Period, Interval, ...) caused complex internals
+
+```python
+if is_categorical_dtype(values):
+    ...
+elif is_datetimetz_dtype(values):
+    ...
+elif is_period_dtype(values):
+    ...
+elif is_interval_dtype(values):
+    ...
+else:
+    ...
+```
+
+---
+
+# Motivation
+
+* Pandas historically bound to NumPy's data representation and its limitations
+* The custom types in pandas (Categorical, Period, Interval, ...) caused complex internals
+
+
+### Series = container of numpy array
+
+---
+count: false
+
+# Motivation
+
+* Pandas historically bound to NumPy's data representation and its limitations
+* The custom types in pandas (Categorical, Period, Interval, ...) caused complex internals
+
+### Series = container of ~~numpy array~~ array-like
+
+???
+
+"array-like" was already the case in practice with the custom dtypes, but now
+formalize it.
+
+
+---
+
+# Extending pandas data types
+
+`ExtensionDtype`
+
+* Name and what type of scalars?
+
+`ExtensionArray`
+
+* Class which does the actual "heavy lifting" (storage, basic array ops)
+* Some required methods/attributes that pandas needs
+* Free to have additional functionality, no restriction on construction
+* Limited to one dimension, though may be backed by 0..n arrays
+
+A Series is a container for an “array-like” thing
+
+---
+class: middle, center
+
+# Demo time!
+
+See [static version](https://nbviewer.jupyter.org/github/jorisvandenbossche/talks/blob/master/2019_PyDataParis_geopandas_extending_pandas/pandas-extension-array-demo.ipynb)
+
+---
+
+# Use case for GeoPandas
+
+Implementing the extension array interface for GeoPandas:
+
+* Better integration with pandas
+* Allows us to store Geometries no longer as python objects but as pointers to underlying GEOS C object
+
+
+.center[
+![:scale 60%](img/geopandas-shapely-1.svg)
+]
+
+
+---
+count: false
+
+# Use case for GeoPandas
+
+Implementing the extension array interface for GeoPandas:
+
+* Better integration with pandas
+* Allows us to store Geometries no longer as python objects but as pointers to underlying GEOS C object
+
+.center[
+![:scale 70%](img/geopandas-shapely-2.svg)
+]
+
+---
+count: false
+
+# Use case for GeoPandas
+
+Implementing the extension array interface for GeoPandas:
+
+* Better integration with pandas
+* Allows us to store Geometries no longer as python objects but as pointers to underlying GEOS C object
+* Improve performance significantly: remove python overhead and iterate in C
+
+--
+
+More info:
+
+* Blogpost: https://jorisvandenbossche.github.io/blog/2017/09/19/geopandas-cython/
+* GitHub: [GH-680](https://github.com/geopandas/geopandas/issues/680), [GH-835](https://github.com/geopandas/geopandas/pull/835), [GH-701](https://github.com/geopandas/geopandas/pull/701)
+
+---
+
+# Possible future paths
+
+* Integration with dask ([blog](https://blog.dask.org/2019/01/22/dask-extension-arrays))
+* Ecosystem of 3rd party extensions (unit data, geo data, nested data, pydata/sparse, cupy, ...) ?
+* Experiment with what future pandas could look like ? (e.g. fletcher with arrow backed columns, computation with xtensor)
+* ...
+
+
+More info: https://pandas-dev.github.io/pandas-blog/pandas-extension-arrays.html
+
+---
+class: middle
+
+# Thanks for listening!
+
+
+## Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        // ratio: "16:9"
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
