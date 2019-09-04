@@ -1,0 +1,661 @@
+<!--
+
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Apache Arrow: a cross-language development platform for in-memory data</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+![:scale 20%](img/apache-arrow-minimal.png)
+
+# Apache Arrow
+
+## A cross-language development platform for in-memory data
+
+Joris Van den Bossche, EuroScipy, September 4, 2019
+
+https://github.com/jorisvandenbossche/talks/
+
+[@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+
+---
+# About me
+
+Joris Van den Bossche
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working part-time at Ursa Labs on Apache Arrow
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+<div style="margin-bottom:-20px"></div>
+
+.center[
+.affiliations[
+  ![:scale 60%](img/pandas_logo.svg)
+  ![:scale 30%](img/ursa_logo_inverted.png)
+]
+]
+
+---
+class: center, middle
+
+![:scale 100%](img/apache-arrow.png)
+
+---
+
+.center[
+![:scale 50%](img/apache-arrow.png)
+]
+
+
+* Open source initiative conceived in 2015
+* Intersection of database systems, big data, and data science tools
+* Purpose: Cross-language open standards and libraries to accelerate and simplify in-memory computing
+* https://github.com/apache/arrow
+
+
+---
+count: false
+
+.center[
+![:scale 50%](img/apache-arrow.png)
+]
+
+
+* Open source initiative conceived in 2015
+* Intersection of database systems, big data, and data science tools
+* Purpose: Cross-language **open standards** and libraries to accelerate and simplify in-memory computing
+* https://github.com/apache/arrow
+
+---
+class: middle, center
+
+# Open standards
+
+???
+
+give some examples:
+
+* Human-readable semi-structured data: XML, JSON
+* Structured data query language: SQL
+* Binary storage formats (with metadata)
+  * NetCDF
+  * HDF5
+  * Apache Parquet, ORC
+* Serialization / RPC protocols
+  * Apache Avro
+  * Protocol buffers
+* Not an open standard: Excel, CSV (grrrr)
+
+Open standards: why do they matter?
+
+* Simplify system architectures
+* Reduce ecosystem fragmentation 
+* Improve interoperability
+* Reuse more libraries and algorithms
+
+---
+
+# Standardized in-memory data
+
+--
+count: false
+
+* Example: numpy - strided ndarray memory layout
+
+???
+
+numpy's strided memory layout -> of course not limited to numpy, it's more universal, but it still is a standard
+
+no-copy sharing of data (memoryviews)
+buffer protocol
+
+--
+count: false
+
+* Why?
+  * Zero-overhead memory sharing between libraries in-memory and processes via shared memory (without serialization)
+  * Reuse computational algorithms
+  * Reuse IO / storage code
+
+???
+
+Why create open standards for in-memory? 
+
+* Reuse computational algorithms
+* Reuse IO / file format interfaces
+* Move data structures without serializing
+* Zero-copy shared memory access
+
+
+---
+
+# Columnar data - "data frames"
+
+* Notoriously not based on open standards
+
+--
+count: false
+
+* Python (pandas DataFrame), R (base data.frame, data.table), Julia, Spark, SQL databases, ...
+
+???
+
+Where are they found?
+* Internals of SQL databases
+* Big data systems (Apache Spark, Apache Hive)
+* In-memory data frame libraries: Python (pandas), R (base, data.table), Julia (DataFrames.jl)
+
+
+--
+count: false
+
+&rarr; Each has it's own "proprietary" memory layout
+
+--
+count: false
+
+
+&rarr; Little code reuse across projects + high serialization costs
+
+
+---
+
+# Traditional analytic database / dataframe
+
+.left-column[
+![:scale 100%](img/database-coupled.png)
+]
+
+--
+count: false
+
+.right-column[
+.small[
+* Tightly coupled components
+* Incompatible memory representations
+  * Cannot share data without serialization
+  * Cannot share algorithms because implementation depends on memory representation
+]
+]
+
+???
+
+Pandas has a lot of code for IO, has its own "block manager" memory layout,
+has a lot of code to perform operations on this, and its own API.
+All this is very tightly integreated.
+For example, pandas has quite some code written in cython for optimizing
+the groupby operations. But currently that is very hard for someone else to reuse.
+
+And R has all this of its own, each database has all this of its own, ...
+
+Incompatible memory representations
+Cannot share data without serialization
+Cannot share algorithms because implementation depends on memory representation
+
+---
+class: center
+
+![:scale 70%](img/arrowsite-copy.png)
+
+--
+count: false
+
+<span style="display:block; margin-top:-20px; margin-bottom:-20px;">&darr;</span>
+
+![:scale 70%](img/arrowsite-shared.png)
+
+
+
+---
+
+# "Deconstructed" database
+
+.left-column[
+![:scale 100%](img/database-deconstructed.png)
+]
+
+.right-column[
+* Components have public APIs
+* Use what you need
+* Different front ends can be developed
+]
+
+
+---
+
+# "Deconstructed" database
+
+.left-column[
+![:scale 100%](img/database-deconstructed-arrow.png)
+]
+
+.right-column[
+.larger[
+**Arrow is front end agnostic**
+]
+]
+
+---
+
+.center[
+![:scale 50%](img/apache-arrow.png)
+]
+
+* Open standards:
+  * Standardized language-independent columnar memory layout
+  * Messaging protocol for serialization and interprocess communication (IPC)
+
+---
+## Arrow's Columnar Memory Format
+
+.center[![:scale 60%](img/arrowsite-simd.png)]
+
+* More native data types: string, date, decimal, nested data, ...
+* Everyting is nullable
+* Memory can be chunked
+* Optimized layout for efficient access and processing
+
+---
+
+.center[
+![:scale 50%](img/apache-arrow.png)
+]
+
+* Open standards:
+  * Standardized language-independent columnar memory layout
+  * Messaging protocol for serialization and interprocess communication (IPC)
+* Libraries:
+  * Implementations of those specifications in many languages (C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby and Rust)
+  * Computational tools based on those standards
+
+
+---
+# Python library: `pyarrow`
+
+* Conversion utilities for Python <-> Arrow
+* Interface to Arrow functionalities
+
+.medium[
+```python
+df = pd.DataFrame({'a': [1, 2, 3],
+                   'b': [0.1, 0.2, 0.3]})
+
+import pyarrow as pa
+table = pa.Table.from_pandas(df)
+```
+]
+
+---
+# Arrow use cases
+
+* Data access
+
+* Data movement
+
+* Runtime data structures for analytics
+
+
+---
+class: center, middle
+
+
+# Example use cases
+
+---
+# Arrow use cases
+
+* **Data access**
+  * Read and write widely used storage formats
+  * Interact with database protocols, other data sources
+
+* Data movement
+
+* Runtime data structures for analytics
+
+
+
+---
+# Apache Parquet
+
+* Standardized, binary, columnar storage format
+* Originally from the Hadoop ecosystem
+
+--
+count: false
+
+Reading and writing Parquet files with pandas (powered by implementation in Apache Arrow):
+
+```python
+import pandas as pd
+df = pd.read_parquet("dataset.parquet")
+```
+
+- High performance
+- High compression
+- Query the data you need
+- Preserves types
+
+???
+
+compared to csv: faster reading / writing, smaller file on disk, preserving data types
+
+but also non-python specific (eg compared to pickle)
+
+---
+# Apache Parquet
+
+Python:
+
+```python
+df = pd.read_parquet("dataset.parquet")
+```
+
+R:
+```r
+df <- read_parquet("dataset.parquet")
+```
+
+MATLAB:
+```python
+T = parquetread("dataset.parquet") 
+```
+
+All using the same Arrow implementation as pandas!
+
+---
+# Turbodbc
+
+![:scale 90%](img/turbodbc-logo.svg)
+
+* Access relational databases via the Open Database Connectivity (ODBC) interface
+* Built-in Arrow support: batched data transfer instead of single-record communication as other popular ODBC modules do.
+
+https://github.com/blue-yonder/turbodbc
+
+---
+# Other data access examples
+
+* Supported formats in Apache Arrow: Parquet, CSV, line-delimited JSON (more coming)
+* [kartothek](https://kartothek.readthedocs.io/en/latest/): managing dataset collections<sup>1</sup>
+* TensforFlow dataset based on Arrow: `ArrowDataset`<sup>2</sup>
+* Vaex: arrow as optional way to open DataFrames<sup>3</sup>
+* ...
+
+
+.credits[
+<sup>1</sup> https://kartothek.readthedocs.io/en/latest/  
+<sup>2</sup> https://medium.com/tensorflow/tensorflow-with-apache-arrow-datasets-cdbcfe80a59f  
+<sup>3</sup> https://docs.vaex.io/
+]
+
+
+
+???
+
+Vaex: optional way to open datasets (although next to parquet, they use the messaging protocol as storage -> memory map)
+
+
+
+---
+# Arrow use cases
+
+* Data access
+
+* **Data movement**
+  * Zero-copy interprocess communication
+  * Efficient RPC / client-server communications
+  * Pass data structures across language boundaries in-memory without copying (e.g. Java to C++)
+
+* Runtime data structures for analytics
+
+
+---
+## PySpark user-defined functions
+
+Arrow-accelerated Python + Apache Spark
+
+* Joint work with Li Jin from Two Sigma, Bryan Cutler from IBM
+* Vectorized user-defined functions, fast data export to pandas
+
+
+```python
+import pandas as pd
+from scipy import stats
+
+@pandas_udf('double')
+def cdf(s):
+    return pd.Series(stats.norm.cdf(s))
+
+df.withColumn('cumulative_probability', cdf(df.v))
+```
+
+---
+## PySpark user-defined functions
+
+![:scale 90%](img/pyspark-udf-benchmark.png)
+
+.credits[
+Source: https://databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html
+
+]
+
+???
+
+---
+
+# Arrow Flight RPC Framework
+
+* When shared memory is not an option
+* Arrow-native RPC framework based on gRPC
+* High performance communication
+* Implement custom data services that send and receive Arrow columnar data natively
+
+???
+
+We are developing a new Arrow-native RPC framework, Arrow Flight, based on gRPC for high performance Arrow-based messaging. Through low-level extensions to gRPC’s internal memory management, we are able to avoid expensive parsing when receiving datasets over the wire, unlocking unprecedented levels of performance in moving datasets from one machine to another.
+
+A gRPC-based framework for defining custom data services that send and receive Arrow columnar data natively
+Uses Protocol Buffers v3 for client protocol
+Pluggable command execution layer, authentication
+Low-level gRPC optimizations
+Write Arrow memory directly onto outgoing gRPC buffer
+Avoid any copying or deserialization 
+
+tcp over a gigabyte a second of data 
+
+---
+# Other examples
+
+* Plasma: in memory, shared object store
+* BigQuery Storage API<sup>1</sup>
+* Dremio + Gandiva (Execute LLVM-compiled expressions inside Java-based query engine) <sup>2</sup>
+* ...
+
+
+.credits[
+<sup>1</sup> https://cloud.google.com/bigquery/docs/reference/storage/  
+<sup>2</sup> https://www.dremio.com/announcing-gandiva-initiative-for-apache-arrow/
+]
+
+---
+# Arrow use cases
+
+* Data access
+
+* Data movement
+
+* **Runtime data structures for analytics**
+  * Efficient in-memory / out-of-core data frame-type analytics
+  * LLVM-compilation for vectorized expression evaluation
+  * Examples: 
+      * Dremio: Data-as-a-Service Platform (https://www.dremio.com/)
+      * RAPIDS GPU DataFrame, BlazingSQL
+
+---
+
+# Arrow on the GPU
+
+RAPIDS framework: https://rapids.ai/
+
+* cuDF: a Python GPU DataFrame library built on the Apache Arrow columnar memory format (as internal representation)
+
+.center[
+![:scale 75%](img/nvidia-rapids.png)
+]
+
+---
+
+# Pandas based on Arrow ?
+
+.center[
+![:scale 85%](img/pandas-arrow-demo.png)
+]
+
+???
+
+What If Pandas ..
+
+* had consistent missing data handling
+* had a proper string data type
+* had native support for nested data, decimals, dates, ...
+* didn't make a copy for every operation
+* could memory-map parts of big tables
+* had a parallel query engine
+
+---
+
+# Pandas based on Arrow ?
+
+The Fletcher package (of Uwe Korn) experiments with this:
+
+* https://github.com/xhochy/fletcher
+* Based on the pandas ExtensionArray interface
+* Using Arrow to store data in pandas Series
+
+---
+.center[
+![:scale 50%](img/apache-arrow.png)
+]
+
+* Cross-language development platform for in-memory, tabular data
+* Open standard columnar memory format
+* Efficient interprocess communication and shared computational tools
+* Support for many languages (C, C++, Java, Javascript, Python, R, MATLAB, Rust, ...)
+
+
+???
+
+A lot "behind the scenes"
+
+
+---
+
+# Arrow C++ Roadmap
+
+.center[
+![:scale 100%](img/arrow-roadmap.png)
+]
+
+
+---
+# Getting involved
+
+* Building a community in Apache Arrow
+
+* Join dev@arrow.apache.org
+
+* PRs to https://github.com/apache/arrow 
+
+---
+
+
+.left-column[
+<br>
+.middle[
+![:scale 100%](img/ursa_logo_website.png)
+]
+
+http://ursalabs.org/
+]
+
+.right-column[
+<br>
+.small[
+* Raise money to support full-time open source developers
+* Grow Apache Arrow ecosystem
+* Build cross-language, portable computational libraries for data science
+* Build relationships across industry
+]
+]
+
+.reset-column[
+Initial sponsors: RStudio, Two Sigma, NVIDIA
+]
+
+
+---
+class: middle
+
+https://arrow.apache.org/
+
+# Thanks for listening!
+
+
+## Those slides:
+
+https://github.com/jorisvandenbossche/talks/
+
+## Slides largely based on slides of Wes McKinney
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        // ratio: "16:9"
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
