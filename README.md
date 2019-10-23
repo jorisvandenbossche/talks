@@ -19,3 +19,5 @@ PyData Paris geopandas/pandas slides: https://jorisvandenbossche.github.io/talks
 London pandas smmit 2019: https://jorisvandenbossche.github.io/talks/2019_London_pandas_extension_arrays/#1
 
 EuroScipy 2019 - Apache Arrow: https://jorisvandenbossche.github.io/talks/2019_EuroScipy_arrow/#1
+
+FOSS4G Belgium 2019 pygeos slides: https://jorisvandenbossche.github.io/talks/2019_FOSS4GBE_pygeos/#1
