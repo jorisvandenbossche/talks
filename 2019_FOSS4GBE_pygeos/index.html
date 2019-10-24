@@ -159,7 +159,7 @@ count: false
 * Implements geometry objects (simple features), spatial predicate functions and spatial
   operations, prepared geometries, STR spatial index, WKT/WKB encoding and decoding
 
-Used under the hood by many applications (QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
+Used under the hood by many applications (GDAL, QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
 
 [geos.osgeo.org](http://geos.osgeo.org)
 
@@ -221,7 +221,7 @@ https://en.wikipedia.org/wiki/DE-9IM
 * Implements geometry objects (simple features), spatial predicate functions and spatial
   operations, prepared geometries, STR spatial index, WKT/WKB encoding and decoding
 
-Used under the hood by many applications (QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
+Used under the hood by many applications (GDAL, QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
 
 [geos.osgeo.org](http://geos.osgeo.org)
 
@@ -279,9 +279,8 @@ typical predicates and operations
 
 # GeoPandas
 
-Make working with geospatial data in python easier
+Make working with tabular geospatial data in python easier by combining Shapely and pandas
 
-* Started by Kelsey Jordahl in 2013
 * Extends the pandas data analysis library to work with geographic objects and spatial operations
 * Combines the power of whole ecosystem of (geo) tools (pandas, geos, shapely, gdal, fiona, pyproj, rtree, ...)
 * Bridge between geospatial packages and the scientific / data science stack
@@ -299,7 +298,32 @@ analysis for which you otherwise would need desktop GIS applications (QGIS, ArcG
 
 makes pandas objects geometry aware
 
+---
 
+# GeoPandas
+
+Make working with tabular geospatial data in python easier by combining Shapely and pandas
+
+.small[
+```python
+>>> df = geopandas.read_file("ne_110m_admin_0_countries.shp")
+>>> df
+       pop_est      continent       name iso_a3  gdp_md_est                       geometry
+0       920938        Oceania       Fiji    FJI      8374.0  MULTIPOLYGON (((180.00000 ...
+1     53950935         Africa   Tanzania    TZA    150600.0  POLYGON ((33.90371 -0.9500...
+2       603253         Africa  W. Sahara    ESH       906.5  POLYGON ((-8.66559 27.6564...
+3     35623680  North America     Canada    CAN   1674000.0  MULTIPOLYGON (((-122.84000...
+..         ...            ...        ...    ...         ...                            ...
+
+>>> df = df.to_crs(epsg=3857) 
+>>> df.geometry.area / 1e9 
+0         21.283337
+1        952.255175
+2        117.102338
+3      52166.480440
+..              ...
+```
+]
 
 ---
 
@@ -432,7 +456,7 @@ count: false
 # PyGEOS implementation ?
 
 * `pygeos.Geometry` Python C extension type holding pointer to GEOS Geometry object
-* Extension type ensures garbage collection on the Python, but the pointer is accessible from C without overhead
+* Extension type ensures garbage collection on the Python level, but the pointer is accessible from C without overhead
 * The ufuncs are implemented in C using the numpy C API
 
 
