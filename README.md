@@ -21,3 +21,5 @@ London pandas smmit 2019: https://jorisvandenbossche.github.io/talks/2019_London
 EuroScipy 2019 - Apache Arrow: https://jorisvandenbossche.github.io/talks/2019_EuroScipy_arrow/#1
 
 FOSS4G Belgium 2019 pygeos slides: https://jorisvandenbossche.github.io/talks/2019_FOSS4GBE_pygeos/#1
+
+GeoPython 2020 - Shapely 2.0 slides: https://jorisvandenbossche.github.io/talks/2020_GeoPython_Shapely-2.0/#1
