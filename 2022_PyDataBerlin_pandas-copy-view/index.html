@@ -1,0 +1,678 @@
+  <!--
+
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Pandas - On Blocks, Copies and Views</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+      <link rel="stylesheet" type="text/css" href="abs-layout.css" />
+      <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css" />
+      
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono';   }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+![:scale 40%](img/pandas.svg)
+
+# On Blocks, Copies and Views: updating pandas' internals
+
+### a.k.a. Getting rid of the SettingWithCopyWarning
+
+Joris Van den Bossche (Voltron Data)<br>
+PyConDE & PyData Berlin, April 13, 2022
+
+https://github.com/jorisvandenbossche/talks/<br>
+[@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+
+---
+
+# About me
+
+Joris Van den Bossche
+<div style="margin-bottom:-20px"></div>
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working part-time at Voltron Data on Apache Arrow
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+
+.affiliations[
+  ![:scale 30%](img/apache-arrow.png)
+  ![:scale 64%](img/voltrondata-logo-green.png)
+]
+
+---
+class: center, middle
+
+# On Blocks, Copies and Views: updating pandas' internals
+
+### a.k.a. Getting rid of the SettingWithCopyWarning
+
+---
+class: center, middle
+
+![](img/settingwithcopywarning.png)
+
+---
+class: center, middle, animated, heartBeat
+
+![](img/scream.png)
+
+---
+
+.abs-layout[
+  ![](img/blogpost_screenshot_1.png)
+]
+
+--
+count:false
+
+.abs-layout.bottom-1.right-50.width-20[
+  ![](img/blogpost_screenshot_2.png)
+]
+
+--
+count:false
+
+.abs-layout.top-1.right-50.width-20[
+  ![](img/blogpost_screenshot_3.png)
+]
+
+--
+count:false
+
+.abs-layout.bottom-1.left-0.width-20[
+  ![](img/blogpost_screenshot_4.png)
+]
+
+--
+count:false
+
+.abs-layout[
+  ![](img/blogpost_screenshot_5.png)
+]
+
+--
+count:false
+
+.abs-layout.bottom-1.right-50.width-20[
+  ![](img/blogpost_screenshot_6.png)
+]
+
+---
+
+# Copy vs view
+
+.center[
+![:scale 80%](img/view-vs-copy.png)
+]
+
+Images from https://www.dataquest.io/blog/settingwithcopywarning/
+
+---
+count: false
+
+# Copy vs view
+
+.center[
+![:scale 80%](img/view-vs-copy-modifying.png)
+]
+
+Images from https://www.dataquest.io/blog/settingwithcopywarning/
+
+
+---
+
+## Examples: filtering rows with a boolean mask
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[df["A"] > 1]
+>>> subset.loc[1, "A"] = 10
+# SettingWithCopyWarning: 
+# A value is trying to be set on a copy of a slice from a DataFrame.
+# Try using .loc[row_indexer,col_indexer] = value instead
+#
+# See the caveats in the documentation: ...
+```
+
+
+Did `df` change as well? 
+
+--
+count: false
+
+.larger[➔ No!]
+
+---
+
+## Examples: slicing rows
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[1:2]
+>>> subset.loc[1, "A"] = 10
+# SettingWithCopyWarning: 
+# A value is trying to be set on a copy of a slice from a DataFrame.
+# Try using .loc[row_indexer,col_indexer] = value instead
+#
+# See the caveats in the documentation: ...
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+.larger[➔ Yes!]
+
+
+---
+
+## Examples: subsetting columns
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[["A", "B"]]
+>>> subset.loc[1, "A"] = 10
+# SettingWithCopyWarning: 
+# A value is trying to be set on a copy of a slice from a DataFrame.
+# Try using .loc[row_indexer,col_indexer] = value instead
+#
+# See the caveats in the documentation: ...
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+.larger[➔ No!]
+
+---
+
+## Examples: selecting a single column
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df["A"]
+>>> subset[1] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+.larger[➔ Yes!]
+
+
+
+---
+
+# Current situation
+
+Problems with the current copy / view semantics of pandas:
+
+- This is confusing for many users
+- You need to be aware of copy/view details of numpy
+- You need defensive (and unncecessary) copying to avoid the warning
+
+
+???
+
+Copies and views in NumPy
+
+explain a view in numpy
+
+slicing gives view, mask gives copy
+
+
+---
+
+# The SettingWithCopyWarning
+
+To avoid "chained assignment (setitem)" pitfalls:
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+>>> df["C"][df["A"] > 1] = 10  # this works
+>>> df[df["A"] > 1]["C"] = 10  # this doesn't work
+```
+
+--
+count: false
+
+Rewriting the second case:
+
+```python
+>>> temp = df[df["A"] > 1]
+>>> temp["C"] = 10
+```
+
+--
+count: false
+
+Our previous example:
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+>>> subset = df[df["A"] > 1]
+...
+>>> subset["C"] = 10
+```
+
+---
+
+# The SettingWithCopyWarning
+
+How to "solve" the warning?
+
+--
+count: false
+
+I want do update `df` -> setitem in one go
+
+```python
+>>> df[df["A"] > 1]["C"] = 10      # this doesn't work
+>>> df`.loc[df["A"] > 1, "C"]` = 10  # this works
+```
+
+Or use `.assign(A=...)` method instead.
+
+--
+count: false
+
+I don't want to update `df` -> explicit (unnecessary) `copy()`
+
+```python
+>>> subset = df[df["A"] > 1]`.copy()`
+...
+>>> subset["C"] = 10
+```
+
+---
+
+# Current situation
+
+Problems with the current copy / view semantics of pandas:
+
+- This is confusing for many users
+- You need to be aware of copy/view details of numpy
+- **You need defensive (and unncecessary) copying to avoid the warning**
+
+
+---
+
+## Intermezzo: copies and method chaining
+
+.center[
+![:scale 60%](img/tweet-matt-harrison.png)
+]
+
+---
+
+## Intermezzo: copies and method chaining
+
+Which steps of this workflow copy the DataFrame?
+
+```python
+(df
+  .rename(columns=lambda col: col.replace(".", "_"))
+  .assign(team_size=lambda df_: df_.team_size.replace(...))
+  .astype({'employment_status': "category", ...})
+  .drop(columns=[...])
+  .dropna(subset="year")
+  .reset_index()
+)
+```
+
+
+---
+count: false
+
+## Intermezzo: copies and method chaining
+
+Which steps of this workflow copy the DataFrame?
+
+```python
+(df
+* .rename(columns=lambda col: col.replace(".", "_"))
+* .assign(team_size=lambda df_: df_.team_size.replace(...))
+* .astype({'employment_status': "category", ...})
+* .drop(columns=[...])
+  .dropna(subset="year")
+* .reset_index()
+)
+```
+
+--
+count: false
+
+The `inplace` keyword *sometimes* avoids the copy, but is not recommended.
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+--
+count: false
+
+Or put differently, the implication is:
+
+> *Mutating a DataFrame only changes the object itself, and not any other.*
+
+> *If you want to change values in a DataFrame or Series, you can only do that by directly mutating the DataFrame/Series at hand*.
+
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage
+
+---
+count: false
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- **A simpler, more consistent user experience**
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage
+
+---
+
+## Examples: filtering rows with a boolean mask
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[df["A"] > 1]
+>>> subset.loc[1, "A"] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+No, `subset` is a different object, so mutating `subset` does not change `df`.
+
+---
+
+## Examples: slicing rows
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[1:2]
+>>> subset.loc[1, "A"] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+No, `subset` is a different object, so mutating `subset` does not change `df`.
+
+---
+
+## Examples: subsetting columns
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[["A", "B"]]
+>>> subset.loc[1, "A"] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+No, `subset` is a different object, so mutating `subset` does not change `df`.
+
+---
+
+## Examples: selecting a single column
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df["A"]
+>>> subset[1] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+No, `subset` is a different object, so mutating `subset` does not change `df`.
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- **We can get rid of the SettingWithCopyWarning** (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage
+
+---
+
+# The SettingWithCopyWarning
+
+With current pandas:
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+# two examples of chained assignment
+>>> df["C"][df["A"] > 1] = 10  # this works
+>>> df[df["A"] > 1]["C"] = 10  # this doesn't work
+```
+
+--
+count: false
+
+With proposal: both examples don't work
+
+--
+count: false
+
+```python
+>>> temp = df["C"]
+>>> temp[temp["A"] > 1] = 10
+```
+
+Chained assignment will never work -> we don't need a warning.
+
+---
+
+# The SettingWithCopyWarning
+
+With current pandas:
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+>>> subset = df[df["A"] > 1]`.copy()`
+...
+>>> subset["C"] = 10
+```
+
+With proposal: additional `copy()` is no longer needed to avoid the warning.
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *<span class="remark-code-span-highlighted">behaves as</span>* a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- **We would no longer need defensive copying in many places in pandas, improving memory usage**
+
+---
+
+## Hiding copy/view details with Copy-on-Write
+
+Guarantee == "behaves as a copy"
+
+Copy-on-Write: usage of views becomes internal implementation detail
+
+---
+## Hiding copy/view details with Copy-on-Write
+
+`subset = df[["A", "B"]]`
+
+.center[
+![:scale 60%](img/schema-copy-on-write-1.svg)
+]
+
+--
+count: false
+
+Modify subset: `subset.loc[1, "A"] = 10` -> only copy data now
+
+.center[
+![:scale 60%](img/schema-copy-on-write-2.svg)
+]
+
+---
+
+## Avoiding copies in method chaining
+
+Which steps of this workflow copy the DataFrame?
+
+```python
+(df
+  .rename(columns=lambda col: col.replace(".", "_"))
+  .assign(team_size=lambda df_: df_.team_size.replace(...))
+  .astype({'employment_status': "category", ...})
+  .drop(columns=[...])
+  .dropna(subset="year")
+  .reset_index()
+)
+```
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage
+
+---
+
+# This is a proposal, not already in pandas
+
+Blogpost: https://jorisvandenbossche.github.io/blog/2022/04/07/pandas-copy-views/
+
+Full proposal: https://docs.google.com/document/d/1ZCQ9mx3LBMy-nhwRl33_jgcvWo9IWdEfxDNQ2thyTb0/edit#heading=h.iexejdstiz8u
+
+Related GitHub issue: https://github.com/pandas-dev/pandas/issues/36195
+
+
+## Feedback welcome!
+
+---
+class: middle
+
+# Thanks for listening!
+
+
+### Those slides: https://github.com/jorisvandenbossche/talks/
+
+
+
+---
+
+# The BlockManager
+
+Blogpost of Uwe Korn: *The one pandas internal I teach all my new colleagues: the BlockManager*
+
+https://uwekorn.com/2020/05/24/the-one-pandas-internal.html
+
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark-0.15.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: "16:9",
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
