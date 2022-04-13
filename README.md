@@ -23,3 +23,5 @@ EuroScipy 2019 - Apache Arrow: https://jorisvandenbossche.github.io/talks/2019_E
 FOSS4G Belgium 2019 pygeos slides: https://jorisvandenbossche.github.io/talks/2019_FOSS4GBE_pygeos/#1
 
 GeoPython 2020 - Shapely 2.0 slides: https://jorisvandenbossche.github.io/talks/2020_GeoPython_Shapely-2.0/#1
+
+PyConDE / PyData Berlin 2022 - Pandas copy/view: https://jorisvandenbossche.github.io/talks/2022_PyDataBerlin_pandas-copy-view/
