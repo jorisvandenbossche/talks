@@ -25,3 +25,5 @@ FOSS4G Belgium 2019 pygeos slides: https://jorisvandenbossche.github.io/talks/20
 GeoPython 2020 - Shapely 2.0 slides: https://jorisvandenbossche.github.io/talks/2020_GeoPython_Shapely-2.0/#1
 
 PyConDE / PyData Berlin 2022 - Pandas copy/view: https://jorisvandenbossche.github.io/talks/2022_PyDataBerlin_pandas-copy-view/
+
+GeoPython 2022 geopandas slides: https://jorisvandenbossche.github.io/talks/2022_GeoPython_geopandas/#1

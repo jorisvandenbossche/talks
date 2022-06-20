@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>State of GeoPandas ecosystem</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+      <link rel="stylesheet" type="text/css" href="abs-layout.css" />
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+![:scale 50%](img/geopandas_logo.svg)
+
+# State of GeoPandas ecosystem
+
+Joris Van den Bossche &  Martin Fleischmann , GeoPython, June 21, 2022
+
+https://github.com/jorisvandenbossche/talks/
+
+
+---
+# About us
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
+
+Joris Van den Bossche
+
+- Background: PhD bio-science engineer, air quality research
+- pandas core dev, geopandas maintainer, scikit-learn contributor
+- Currently working part-time at Voltron Data on Apache Arrow
+
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/martin.png" />
+
+Martin Fleischmann
+
+* Researcher at Geographic Data Science Lab at the University of Liverpool
+* Urban morphology and geographic data science
+* Author of momepy package, member of development teams of GeoPandas and PySAL
+
+<a href="https://twitter.com/jorisvdbossche"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
+<a href="https://twitter.com/martinfleis"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/martinfleis</a>
+
+
+https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
+
+
+.affiliations[
+  ![:scale 30%](img/apache-arrow.png)
+  ![:scale 64%](img/voltrondata-logo-green.png)
+]
+---
+
+class: middle, center
+
+# GeoPandas
+
+# Easy, fast and scalable geospatial analysis in Python
+
+---
+
+# GeoPandas
+
+Make working with geospatial data in python easier
+
+* Started by Kelsey Jordahl in 2013
+* Extends the pandas data analysis library to work with geographic objects and spatial operations
+* Combines the power of whole ecosystem of (geo) tools (pandas, geos, shapely, gdal, fiona, pyproj, rtree, ...)
+
+Documentation: http://geopandas.readthedocs.io/
+
+???
+
+make working with geospatial data like working with any other kind of data in python
+(data stack, numpy, pandas and other tools around those)
+analysis for which you otherwise would need desktop GIS applications (QGIS, ArcGIS) or geospatial databases (PostGIS)
+
+makes pandas objects geometry aware
+
+properties
+shapefile: shapes / attributes
+
+=> fits dataframe
+
+=> geopandas
+
+=> made easy:
+- familiar for pandas users
+- provides easy access to geometrical operations for arrays of geometries (no loops anymore)
+- joins, overlays, mapping
+
+GeoPandas showcase
+(filtering, plotting, join, projection, ....)
+
+
+
+
+---
+
+# GeoPandas
+
+* Read and write variety of formats (fiona, GDAL/OGR)
+* Familiar manipulation of the attributes (pandas dataframe)
+* Element-wise spatial predicates (intersects, within, ...) and operations (intersection, union, difference, ..) (shapely)
+* Re-project your data (pyproj)
+* Quickly visualize the geometries (matplotlib, folium)
+* More advanced spatial operations: spatial joins and overlays
+
+**➔ Interactive exploration and analysis of geospatial data**
+
+
+---
+
+class: middle, center
+
+# GeoPandas
+
+# .darkred[.fat[Easy]], fast and scalable geospatial analysis in Python
+
+
+## ➔ Some highlights of new features of the last releases
+
+
+---
+
+## New interactive `explore()` using Folium / leaflet.js
+
+```python
+gdf.explore()
+```
+
+.center[
+<iframe src="countries-explore.html" height="450" width="70%"></iframe>
+]
+
+---
+
+## New interactive `explore()` using Folium / leaflet.js
+
+```python
+gdf.explore(column="gdp_md_est", scheme="NaturalBreaks")
+```
+
+.center[
+<iframe src="countries-explore-gdp.html" height="450" width="70%"></iframe>
+]
+
+---
+
+
+## Joining based on proximity: `sjoin_nearest()`
+
+`sjoin` requires an exact predicate (within, contains, intersects, ...)
+
+TODO example
+
+new "sjoin_nearest" method to join based on proximity, with the ability to set a maximum search radius. 
+
+---
+
+## Some other recent improvements
+
+
+* New `GeoDataFrame.to_postgis()` method to write to PostGIS database
+* `geopandas.read_file()` will now automatically recognize zip files, without needing to prepend "zip://" to the path
+* Better support for GeoDataFrames with multiple geometry columns
+* ... and many bug fixes and small improvements!
+
+---
+class: center, middle
+
+![:scale 80%](img/overview-libraries.png)
+
+???
+
+What I showed are some features implemented in geopandas itself (although of
+course still depending on external dependencies), but geopandas is also
+depending on some other packages to provide the core geospatial capabilities,
+and next we will look at improvements in those dependencies
+
+---
+class: middle, center
+
+# GeoPandas
+
+#  Easy, .darkred[.fat[fast]] and scalable geospatial analysis in Python
+
+## ➔ Improvements in the underlying geospatial Python stack
+
+---
+class: center, middle
+
+![:scale 80%](img/overview-libraries-1.png)
+
+
+---
+class: center, middle
+
+# Shapely 2.0 / PyGEOS
+
+---
+
+# Shapely
+
+Python package for the manipulation and analysis of geometric objects
+
+<div style="margin-bottom:-10px"></div>
+
+Pythonic interface to GEOS
+
+--
+count:false
+
+.mmedium[
+```python
+>>> from shapely.geometry import Point, LineString, Polygon
+
+>>> point = Point(1, 1)
+>>> line = LineString([(0, 0), (1, 2), (2, 2)])
+>>> poly = line.buffer(1)
+```
+]
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100.0" height="100.0" viewBox="-0.12 -0.12 3.24 2.24" preserveAspectRatio="xMinYMin meet"><g transform="matrix(1,0,0,-1,0,2.0)"><polyline fill="none" stroke="#66cc99" stroke-width="0.06480000000000001" points="0.0,0.0 1.0,2.0 3.0,2.0" opacity="0.8" /></g></svg>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100.0" height="100.0" viewBox="-1.199614564286579 -1.1996145642865792 5.399599739836063 4.399599739836063" preserveAspectRatio="xMinYMin meet"><g transform="matrix(1,0,0,-1,0,2.0003706112629045)"><path fill-rule="evenodd" fill="#66cc99" stroke="#555555" stroke-width="0.10799199479672125" opacity="0.6" d="M 0.10557280900008414,2.447213595499958 L 0.155035474356646,2.53482235406189 L 0.2130507437626893,2.6170177210644305 L 0.2790313953728045,2.692967727345159 L 0.35230958293898673,2.7619036183450834 L 0.4321435956500752,2.823127635326852 L 0.5177253656172087,2.8760200779839153 L 0.6081886470156581,2.920045576953979 L 0.7026177840949897,2.9547585127472944 L 0.8000569793090774,2.979807526240225 L 0.8995199677553422,2.994939075079531 L 1.0,3.0 L 3.0,3.0 L 3.098017140329562,2.9951847266721967 L 3.1950903220161297,2.9807852804032304 L 3.290284677254464,2.9569403357322086 L 3.382683432365091,2.923879532511286 L 3.471396736825999,2.8819212643483545 L 3.555570233019603,2.831469612302545 L 3.634393284163646,2.7730104533627364 L 3.707106781186548,2.707106781186547 L 3.7730104533627373,2.634393284163645 L 3.831469612302546,2.5555702330196017 L 3.8819212643483554,2.471396736825997 L 3.923879532511287,2.382683432365089 L 3.956940335732209,2.290284677254462 L 3.9807852804032304,2.195090322016128 L 3.995184726672197,2.0980171403295604 L 4.0,2.0 L 3.995184726672197,1.9019828596704396 L 3.9807852804032304,1.804909677983872 L 3.956940335732209,1.709715322745538 L 3.923879532511287,1.6173165676349106 L 3.8819212643483554,1.528603263174003 L 3.8314696123025453,1.4444297669803983 L 3.7730104533627373,1.3656067158363547 L 3.707106781186548,1.2928932188134525 L 3.6343932841636457,1.2269895466372631 L 3.555570233019602,1.1685303876974547 L 3.4713967368259975,1.118078735651645 L 3.3826834323650896,1.076120467488713 L 3.290284677254462,1.043059664267791 L 3.195090322016128,1.0192147195967696 L 3.09801714032956,1.004815273327803 L 3.0,1.0 L 1.6180339887498947,1.0 L 0.8944271909999159,-0.4472135954999579 L 0.8462856818560246,-0.5327293352965308 L 0.7899939789690481,-0.6131146003747189 L 0.7260942022099621,-0.6875952366887649 L 0.6552017413601281,-0.7554539549957071 L 0.5779993295712907,-0.816037238742901 L 0.4952304682721081,-0.8687616377896693 L 0.4076922668429532,-0.9131193873511033 L 0.3162277660168373,-0.948683298050514 L 0.22171781893629816,-0.9751108699866549 L 0.12507260805611378,-0.9921475911950004 L 0.02722287958870663,-0.9996293887370953 L -0.0708890200906795,-0.9974842088126424 L -0.16831821975471215,-0.985732710676989 L -0.26412642295040845,-0.9644880676812035 L -0.3573909443069025,-0.9339548773508389 L -0.4472135954999579,-0.8944271909999159 L -0.5327293352965292,-0.8462856818560256 L -0.6131146003747172,-0.7899939789690493 L -0.6875952366887635,-0.7260942022099635 L -0.755453954995706,-0.6552017413601293 L -0.8160372387428999,-0.5779993295712923 L -0.8687616377896683,-0.49523046827210987 L -0.9131193873511024,-0.40769226684295523 L -0.9486832980505132,-0.31622776601683966 L -0.9751108699866542,-0.22171781893630083 L -0.9921475911950001,-0.1250726080561167 L -0.9996293887370952,-0.0272228795887098 L -0.9974842088126427,0.07088902009067612 L -0.9857327106769895,0.1683182197547086 L -0.9644880676812047,0.2641264229504048 L -0.9339548773508404,0.35739094430689866 L -0.8944271909999179,0.4472135954999539 L 0.10557280900008414,2.447213595499958 z" /></g></svg>
+<div style="margin-bottom:-45px"></div>
+.mmedium[
+```python
+>>> poly.contains(point)
+True
+```
+]
+
+--
+count: false
+
+Nice interface to GEOS, but: single objects, no attributes
+
+
+
+---
+
+# Why is GeoPandas slow?
+
+- GeoPandas stores custom Python (Shapely) objects in arrays
+- For operations, it iterates through those objects
+- The Shapely objects each call the GEOS C operation
+
+<div style="margin-bottom:45px"></div>
+
+.center[
+![:scale 60%](img/geopandas-shapely-1.svg)
+]
+
+
+---
+
+# Why is GeoPandas slow?
+
+- GeoPandas stores custom Python (Shapely) objects in arrays
+- For operations, it iterates through those objects
+- The Shapely objects each call the GEOS C operation
+
+<div style="margin-bottom:45px"></div>
+
+
+```python
+class GeoSeries:
+    ...
+
+    def distance(self, other):
+        result = [geom.distance(other) for geom in self.geometry]
+        return pd.Series(result)
+```
+
+---
+
+# Making it faster
+
+- Move the loop into C and iterate directly over pointers to GEOS objects
+
+<div style="margin-bottom:85px"></div>
+
+
+.center[
+![:scale 60%](img/geopandas-shapely-2.svg)
+]
+
+
+---
+
+# Shapely 2.0
+
+Prototyped in PyGEOS, started by Casper van der Wel (https://github.com/pygeos/pygeos/), merged into Shapely to become Shapely 2.0
+
+New way to expose geospatial operations from GEOS into Python:
+
+- array-based + vectorized functions
+- fast
+
+---
+
+# Array-based
+
+Instead of a manual `for` loop:
+
+```python
+[poly.contains(point) for point in points]
+```
+
+you can do
+
+```python
+shapely.contains(poly, points)
+```
+
+---
+
+# Fast
+
+Benchmark for 1M points: contained in or distance to a polygon
+
+![:scale 49%](img/pygeos_timings-contains.png)
+![:scale 49%](img/pygeos_timings-distance.png)
+
+Significant performance increase: 80x (contains) to 5x (distance) for this example
+
+---
+
+# Fast
+
+Spatial join of NYC neighborhoods with census blocks (example from https://postgis.net/workshops/postgis-intro/)
+
+```python
+geopandas.sjoin(
+    nyc_neighborhoods, nyc_census_blocks, op='intersects'
+)
+```
+
+.center[
+![:scale 49%](img/geopandas-timings_sjoin_pygeos.png)
+]
+
+???
+
+But depends a lot on the exact case (characteristics of the geometries being joined).
+Another artificial case of point-in-polygon with a grid, get 40x speed-up.
+
+
+---
+
+# Roadmap for Shapely 2.0
+
+See full proposal at https://github.com/shapely/shapely-rfc/pull/1/
+
+Current status:
+
+* Code of PyGEOS has been fully integrated into Shapely (including array-based API)
+* Internals of Shapely are refactored to use C extension type instead of `ctypes` for the Geometry class
+* Preserve familiar Shapely interface for single geometries
+* Numpy is now a required dependency
+* Set of API changes
+
+
+---
+
+# Roadmap for Shapely 2.0
+
+See full proposal at https://github.com/shapely/shapely-rfc/pull/1/
+
+* Set of API changes:
+  * Make the Geometry objects immutable + hashable
+  * Remove "array interface"  
+    (`np.array(line)` -> `np.array(line.coords)`)
+  * Multi-part geometries are no longer iterable  
+    (`list(multi_polygon)` -> `list(multi_polygon.geoms)`)
+
+---
+
+# Roadmap for Shapely 2.0
+
+Current status:
+
+* Shapely 1.8 has been released with deprecation warnings
+* We are planning a first Shapely 2.0 alpha release in July
+
+--
+count: false
+
+How can you help?
+
+* GeoPandas can already optionally use PyGEOS (will be updated to work with Shapely 2.0)
+  * https://geopandas.readthedocs.io/en/latest/getting_started/install.html#using-the-optional-pygeos-dependency
+* Having code / package that rely on Shapely? Test with Shapely 1.8 and update your code
+* Test with Shapely 2.0 once first alpha is out
+
+This includes a large set of changes. Testing and giving feedback is very useful!
+
+???
+
+* Try out GeoPandas with PyGEOS and give feedback
+
+
+---
+class: center, middle
+
+![:scale 80%](img/overview-libraries-2.png)
+
+---
+
+class: center, middle
+
+# pyogrio
+
+## Vectorized spatial vector file format I/O using GDAL/OGR
+
+
+---
+
+# pyogrio
+
+GeoPandas-oriented API to read/write GDAL/OGR vector data sources.
+
+Faster than Fiona, but less general purpose.
+
+Started by Brendan Ward, adapted from Fiona.
+
+https://github.com/geopandas/pyogrio
+
+
+---
+
+# pyogrio
+
+Direct use of pyogrio API:
+
+```python
+import pyogrio
+gdf = pyogrio.read_dataframe("path/to/file")
+pyogrio.write_dataframe(gdf, "path/to/file")
+```
+
+Use through familiar GeoPandas API (>= 0.11):
+
+```python
+gdf = pyogrio.read_file("path/to/file", engine="pyogrio")
+gdf.to_file("path/to_file", driver="pyogrio")
+```
+
+Goal to make `engine="pyogrio"` the default in the future.
+
+---
+
+
+
+timing example
+
+
+---
+
+GDAL RCF columnar layout?
+
+
+---
+
+class: center, middle
+
+# GeoParquet
+
+
+---
+class: theme-green-minimal
+layout: true
+name: parquet
+
+## What is Apache Parquet?
+
+From http://parquet.apache.org/:
+
+.abs-layout.bottom-1.right-50.width-20[
+  ![](img/Apache_Parquet_logo.svg.png)
+]
+---
+layout: false
+template: parquet
+count: false
+
+> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+---
+template: parquet
+count: false
+
+> *Apache Parquet is an **open source**, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is **available in multiple languages** including Java, C++, Python, etc...*
+
+---
+count: false
+
+> *Apache Parquet is an open source, **column-oriented** data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle **complex data** in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+---
+count: false
+
+> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides **efficient data compression and encoding schemes** with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+---
+count: false
+
+> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+➔ Widely used file format to store large amounts of data (data lakes) for analytical processing, often in cloud context
+
+
+---
+layout: false
+class: theme-green-minimal
+
+## What is GeoParquet?
+
+Goal:
+
+> *Standardize how geospatial data is represented in Parquet to further
+geospatial interoperability among tools using Parquet today, and hopefully
+help push forward what's possible with 'cloud-native geospatial' workflows.*
+
+--
+count: false
+
+➔ Specification how to store geospatial vector data in Parquet files
+
+--
+count: false
+
+* Which data type to use (currently WKB as variable-size binary (BYTE_ARRAY))
+
+--
+count: false
+
+* Metadata (encoding, coordinate reference system, geometry types, planar vs spherical edges, ...)
+
+
+???
+
+(using the existing Parquet spec)
+
+Features:
+
+* Multiple spatial reference systems
+* Multiple geometry columns
+* Work with both planar and spherical coordinates
+* Great compression / small files
+* Great at read-heavy analytic workflows
+* Support for data partitioning
+* Enable spatial indices (planned)
+
+---
+class: theme-green-minimal
+
+## GeoParquet: fast reading and writing
+
+Python:
+
+```python
+import geopandas
+geopandas.read_parquet("nz-buildings-outlines.parquet")
+```
+
+R:
+```r
+library(geoarrow)
+read_geoparquet_sf("nz-buildings-outlines.parquet")
+```
+
+---
+class: theme-green-minimal
+
+## GeoParquet: fast reading and writing
+
+```python
+import geopandas
+geopandas.read_parquet("nz-buildings-outlines.parquet")
+```
+
+![:scale 40%](img/bench_geoparquet.png)
+![:scale 27%](img/bench_geoparquet_file_size.png)
+
+.midi[Benchmark using GDAL master with pyogrio (GPKG, SHP, FGB) and pyarrow (Parquet) ]
+---
+class: theme-green-minimal
+
+## GeoParquet: evolving specification
+
+* GeoPandas has Parquet IO since June 2020
+* Official initiative started in OGC repo (2021)
+* GeoParquet v0.1.0 (March 9, 2022): initial release
+* GeoParquet v0.4.0 (May 26, 2022): use of PROJJSON, ...
+
+Early contributors include developers from GeoPandas, GeoTrellis, OpenLayers, Vis.gl, Planet, Voltron Data, Microsoft, Carto, Azavea & Unfolded
+
+This spec is work in progress! Feedback very welcome!
+
+https://github.com/opengeospatial/geoparquet
+
+---
+class: theme-green-minimal
+
+## GeoParquet: evolving specification
+
+
+Expand support for the format:
+  * Included in GDAL 3.5
+  * Python (GeoPandas), R (sfarrow & geoarrow) and Julia (GeoParquet.jl)
+  * WIP for Apache Sedona, Carto, ...
+  * Usage in data stores (Microsoft's Planetary Computer Data Catalog, ...)
+
+Future work:
+
+* Support for data partitioning and spatial indexing
+* Stabilize the spec
+
+Welcome to join at https://github.com/opengeospatial/geoparquet !
+
+???
+
+Features:
+
+* Multiple spatial reference systems
+* Multiple geometry columns
+* Work with both planar and spherical coordinates
+* Great compression / small files
+* Great at read-heavy analytic workflows
+* Support for data partitioning
+* Enable spatial indices (planned)
+
+
+---
+
+
+---
+class: middle, center
+
+# GeoPandas
+
+#  Easy, fast and .darkred[.fat[scalable]] geospatial analysis in Python
+
+
+## ➔ Introducing dask-geopandas
+
+
+
+???
+
+Python has a fast and pragmatic data science ecosystem
+... restricted to in-memory and a single core
+
+
+---
+.center[
+![:scale 55%](img/dask_horizontal.svg)
+]
+## A flexible library for parallelism
+
+
+* A parallel computing framework, written in pure Python
+* Lets you work on larger-than-memory datasets
+* That leverages the excellent Python ecosystem
+* Using blocked algorithms and task scheduling
+
+https://www.dask.org/
+
+???
+
+# An experiment with taxi data
+
+[Ravi Shekhar](http://people.earth.yale.edu/profile/ravi-shekhar/about) published a blogpost [Geospatial Operations at Scale with Dask and GeoPandas](https://medium.com/towards-data-science/geospatial-operations-at-scale-with-dask-and-geopandas-4d92d00eb7e8) in which he counted the number of rides originating from each of the official taxi zones of New York City
+
+Matthew Rocklin re-ran the experiment with the in-development version: 3h -> 8min ([see his blogpost](http://matthewrocklin.com/blog/work/2017/09/21/accelerating-geopandas-1))
+
+[dask-geopandas](https://github.com/mrocklin/dask-geopandas): experimental library with parallelized geospatial operations and joins
+
+
+## Demo time! 
+
+See [static version](http://nbviewer.jupyter.org/gist/jorisvandenbossche/67be41a246c1281d7046b31690988321)
+
+
+<!-- # Want to try this out?
+
+Feedback and polishing needed!
+
+See https://github.com/geopandas/geopandas/issues/473
+
+Build new version (needs GEOS and shapely already installed):
+
+* clone https://github.com/geopandas/geopandas
+* checkout 'geopandas-cython' branch
+* `make inplace` -->
+
+---
+
+# GeoPandas - dask bridge
+
+https://github.com/geopandas/dask-geopandas
+
+### New library with parallelized geospatial operations and joins
+
+--
+count: false
+
+<div style="margin-bottom:100px"></div>
+
+.center[
+## Demo time! 
+
+See [static version](http://nbviewer.jupyter.org/gist/jorisvandenbossche/67be41a246c1281d7046b31690988321)
+]
+
+---
+
+# GeoPandas - dask bridge
+
+https://github.com/geopandas/dask-geopandas
+
+### New library with parallelized geospatial operations and joins
+
+Many areas for improvement:
+
+- Higher coverage of functionality (overlay, ...)
+- Better use of spatial indexing
+- ...
+
+Young project, but ready to be tried out!
+
+---
+
+# Contributions welcome!
+
+### Feedback, bug reports, feature requests
+
+### Extend functionality
+
+### Contribute code: https://github.com/geopandas/geopandas
+
+---
+class: middle
+
+http://geopandas.readthedocs.io
+
+# Thanks for listening!
+
+## Thanks to all contributors!
+
+## Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+- [jorisvandenbossche.github.io/talks/2022_GeoPython_geopandas](
+    http://jorisvandenbossche.github.io/talks/2022_GeoPython_geopandas)
+
+http://geopandas.readthedocs.io
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+
+
+---
+class: middle, center
+
+# Open source geospatial software
+
+.center[
+![:scale 70%](img/Open_Source_Geospatial_Foundation.svg)
+]
+
+???
+
+# geospatial software
+
+This presentation: in python
+
+but everything I will present -> builds upon widely used open source libraries
+
+
+Open Source Geospatial Foundation
+
+OSGeo was created to support the collaborative development of open source geospatial software, and promote its widespread use.
+
+---
+
+# GDAL / OGR
+
+### Geospatial Data Abstraction Library.
+
+<img style="position: absolute; top: 12px; right: 20px; height:35%" src="img/GDALLogoColor.svg">
+
+* The swiss army knife for geospatial.
+* Read and write Raster (GDAL) and Vector (OGR) datasets
+* More than 200 (mainly) geospatial formats and protocols.
+
+.center[
+![:scale 100%](img/gdal_formats)
+]
+
+
+.credits[
+Slide from "GDAL 2.2 What's new?" by Even Rouault (CC BY-SA)
+]
+
+???
+
+GDAL is a translator library for raster and vector geospatial data formats. As a library, it presents a single raster abstract data model and single vector abstract data model to the calling application for all supported formats. It also comes with a variety of useful command line utilities for data translation and processing.
+
+<!--
+# GDAL / OGR
+
+### Widely used (FOSS & proprietary)
+
+.center[
+![:scale 100%](img/gdal_users)
+]
+
+.credits[
+Slide from "GDAL 2.2 What's new?" by Even Rouault (CC BY-SA)
+] -->
+
+---
+
+# GEOS
+
+<img style="position: absolute; top: 20px; right: 20px; width:40%" src="img/geos.gif">
+
+## Geometry Engine Open Source
+
+* C/C++ port of a subset of Java Topology Suite (JTS)
+* Most widely used geospatial C++ geometry library
+* Implements geometry objects (simple features), spatial predicate functions and spatial operations
+
+Used under the hood by many applications (QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
+
+[geos.osgeo.org](http://geos.osgeo.org)
+
+
+<!-- ---
+# PROJ.4
+
+C library for performing conversions between cartographic projections.
+
+[http://proj4.org/](http://proj4.org/) -->
+
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: "16:9",
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
