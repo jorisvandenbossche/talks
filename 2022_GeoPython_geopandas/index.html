@@ -210,7 +210,7 @@ Lightweight library providing a collection of available XYZ services offering ra
  'html_attribution': '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
  'attribution': '(C) OpenStreetMap contributors',
  'name': 'OpenStreetMap.Mapnik'}
- 
+
  >>> xyz..Stamen.TonerLite.url
 'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}' 
 ```
@@ -390,7 +390,7 @@ geopandas.sjoin(
 ```
 
 .center[
-![:scale 49%](img/geopandas-timings_sjoin_pygeos.png)
+![:scale 40%](img/geopandas-timings_sjoin_pygeos.png)
 ]
 
 ???
@@ -521,6 +521,22 @@ We have seen >5-10x speedups reading files and >5-20x speedups writing files com
 ???
 
 GDAL RCF columnar layout?
+
+---
+class: middle, center
+
+.medium[
+```
+pip install pyogrio
+# or
+conda install -c conda-forge pyogrio
+```
+]
+
+<div style="margin-bottom:85px"></div>
+
+
+### ➔ Feedback to https://github.com/geopandas/pyogrio/issues/
 
 
 ---
@@ -694,8 +710,6 @@ Features:
 * Support for data partitioning
 * Enable spatial indices (planned)
 
-
----
 
 
 ---
