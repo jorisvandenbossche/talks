@@ -54,9 +54,12 @@ Martin Fleischmann
 * Urban morphology and geographic data science
 * Author of momepy package, member of development teams of GeoPandas and PySAL
 
+.center[
 <a href="https://twitter.com/jorisvdbossche"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
 <a href="https://twitter.com/martinfleis"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/martinfleis</a>
+]
 
+???
 
 https://github.com/jorisvandenbossche   Twitter: [@jorisvdbossche](https://twitter.com/jorisvdbossche)
 
@@ -166,11 +169,21 @@ gdf.explore(column="gdp_md_est", scheme="NaturalBreaks")
 
 ## Joining based on proximity: `sjoin_nearest()`
 
-`sjoin` requires an exact predicate (within, contains, intersects, ...)
+`sjoin()` requires an exact predicate (within, contains, intersects, ...).
 
-TODO example
+New `sjoin_nearest()` method to join based on proximity, with the ability to set a maximum search radius. 
 
-new "sjoin_nearest" method to join based on proximity, with the ability to set a maximum search radius. 
+--
+count: false
+
+<div style="margin-bottom:50px"></div>
+
+Example : joining nearest road attributes to points of interest:
+
+```python
+geopandas.sjoin_nearest(pois, roads, max_distance=50, distance_col="distance")
+
+```
 
 ---
 
@@ -181,6 +194,29 @@ new "sjoin_nearest" method to join based on proximity, with the ability to set a
 * `geopandas.read_file()` will now automatically recognize zip files, without needing to prepend "zip://" to the path
 * Better support for GeoDataFrames with multiple geometry columns
 * ... and many bug fixes and small improvements!
+
+---
+
+## `xyzservices`: Source of XYZ tiles providers 
+
+Lightweight library providing a collection of available XYZ services offering raster basemap tiles
+
+```python
+>>> import xyzservices.providers as xyz
+
+>>> xyz.OpenStreetMap.Mapnik
+{'url': 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+ 'max_zoom': 19,
+ 'html_attribution': '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+ 'attribution': '(C) OpenStreetMap contributors',
+ 'name': 'OpenStreetMap.Mapnik'}
+ 
+ >>> xyz..Stamen.TonerLite.url
+'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}' 
+```
+
+Used by geopandas, contextily, ipyleaflet, leafmap, bokeh, holoviews, ...
+
 
 ---
 class: center, middle
@@ -441,6 +477,8 @@ Faster than Fiona, but less general purpose.
 
 Started by Brendan Ward, adapted from Fiona.
 
+Has Windows wheels!
+
 https://github.com/geopandas/pyogrio
 
 
@@ -467,12 +505,20 @@ Goal to make `engine="pyogrio"` the default in the future.
 
 ---
 
+# pyogrio benchmark
 
+```python
+geopandas.read_parquet("nz-buildings-outlines.gpkg", engine="fiona"|"pyogrio")
+```
 
-timing example
+![:scale 49%](img/bench_pyogrio_read.png)
+![:scale 49%](img/bench_pyogrio_memory.png)
 
+<!-- .midi[Benchmark using GDAL 3.5 with pyogrio (GPKG, SHP, FGB) and pyarrow (Parquet) ] -->
 
----
+We have seen >5-10x speedups reading files and >5-20x speedups writing files compared to using non-vectorized approaches (current I/O support in GeoPandas using Fiona).
+
+???
 
 GDAL RCF columnar layout?
 
