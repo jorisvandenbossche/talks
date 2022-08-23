@@ -1,0 +1,2479 @@
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg version="1.1" width="1200" height="2304" onload="init(evt)" viewBox="0 0 1200 2304" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:fg="http://github.com/jonhoo/inferno">
+    <!--Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples.-->
+    <!--NOTES: -->
+    <defs>
+        <linearGradient id="background" y1="0" y2="1" x1="0" x2="0">
+            <stop stop-color="#eeeeee" offset="5%"/>
+            <stop stop-color="#eeeeb0" offset="95%"/>
+        </linearGradient>
+    </defs>
+    <style type="text/css">
+text { font-family:"monospace"; font-size:16px; fill:rgb(0,0,0); }
+#title { text-anchor:middle; font-size:21px; }
+#search { opacity:0.1; cursor:pointer; }
+#search:hover, #search.show { opacity:1; }
+#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+#unzoom { cursor:pointer; }
+#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+.hide { display:none; }
+.parent { opacity:0.5; }
+</style>
+    <script type="text/ecmascript"><![CDATA[
+        var nametype = 'Function:';
+        var fontsize = 16;
+        var fontwidth = 0.59;
+        var xpad = 10;
+        var inverted = true;
+        var searchcolor = 'rgb(230,0,230)';
+        var fluiddrawing = true;
+        var truncate_text_right = false;
+    ]]><![CDATA["use strict";
+var details, searchbtn, unzoombtn, matchedtxt, svg, searching, frames;
+function init(evt) {
+    details = document.getElementById("details").firstChild;
+    searchbtn = document.getElementById("search");
+    unzoombtn = document.getElementById("unzoom");
+    matchedtxt = document.getElementById("matched");
+    svg = document.getElementsByTagName("svg")[0];
+    frames = document.getElementById("frames");
+    total_samples = parseInt(frames.attributes.total_samples.value);
+    searching = 0;
+
+    // Use GET parameters to restore a flamegraph's state.
+    var restore_state = function() {
+        var params = get_params();
+        if (params.x && params.y)
+            zoom(find_group(document.querySelector('[*|x="' + params.x + '"][y="' + params.y + '"]')));
+        if (params.s)
+            search(params.s);
+    };
+
+    if (fluiddrawing) {
+        // Make width dynamic so the SVG fits its parent's width.
+        svg.removeAttribute("width");
+        // Edge requires us to have a viewBox that gets updated with size changes.
+        var isEdge = /Edge\/\d./i.test(navigator.userAgent);
+        if (!isEdge) {
+          svg.removeAttribute("viewBox");
+        }
+        var update_for_width_change = function() {
+            if (isEdge) {
+                svg.attributes.viewBox.value = "0 0 " + svg.width.baseVal.value + " " + svg.height.baseVal.value;
+            }
+
+            // Keep consistent padding on left and right of frames container.
+            frames.attributes.width.value = svg.width.baseVal.value - xpad * 2;
+
+            // Text truncation needs to be adjusted for the current width.
+            var el = frames.children;
+            for(var i = 0; i < el.length; i++) {
+                update_text(el[i]);
+            }
+
+            // Keep search elements at a fixed distance from right edge.
+            var svgWidth = svg.width.baseVal.value;
+            searchbtn.attributes.x.value = svgWidth - xpad - 100;
+            matchedtxt.attributes.x.value = svgWidth - xpad - 100;
+        };
+        window.addEventListener('resize', function() {
+            update_for_width_change();
+        });
+        // This needs to be done asynchronously for Safari to work.
+        setTimeout(function() {
+            unzoom();
+            update_for_width_change();
+            restore_state();
+        }, 0);
+    } else {
+        restore_state();
+    }
+}
+// event listeners
+window.addEventListener("click", function(e) {
+    var target = find_group(e.target);
+    if (target) {
+        if (target.nodeName == "a") {
+            if (e.ctrlKey === false) return;
+            e.preventDefault();
+        }
+        if (target.classList.contains("parent")) unzoom();
+        zoom(target);
+
+        // set parameters for zoom state
+        var el = target.querySelector("rect");
+        if (el && el.attributes && el.attributes.y && el.attributes["fg:x"]) {
+            var params = get_params()
+            params.x = el.attributes["fg:x"].value;
+            params.y = el.attributes.y.value;
+            history.replaceState(null, null, parse_params(params));
+        }
+    }
+    else if (e.target.id == "unzoom") {
+        unzoom();
+
+        // remove zoom state
+        var params = get_params();
+        if (params.x) delete params.x;
+        if (params.y) delete params.y;
+        history.replaceState(null, null, parse_params(params));
+    }
+    else if (e.target.id == "search") search_prompt();
+}, false)
+// mouse-over for info
+// show
+window.addEventListener("mouseover", function(e) {
+    var target = find_group(e.target);
+    if (target) details.nodeValue = nametype + " " + g_to_text(target);
+}, false)
+// clear
+window.addEventListener("mouseout", function(e) {
+    var target = find_group(e.target);
+    if (target) details.nodeValue = ' ';
+}, false)
+// ctrl-F for search
+window.addEventListener("keydown",function (e) {
+    if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+        e.preventDefault();
+        search_prompt();
+    }
+}, false)
+// functions
+function get_params() {
+    var params = {};
+    var paramsarr = window.location.search.substr(1).split('&');
+    for (var i = 0; i < paramsarr.length; ++i) {
+        var tmp = paramsarr[i].split("=");
+        if (!tmp[0] || !tmp[1]) continue;
+        params[tmp[0]]  = decodeURIComponent(tmp[1]);
+    }
+    return params;
+}
+function parse_params(params) {
+    var uri = "?";
+    for (var key in params) {
+        uri += key + '=' + encodeURIComponent(params[key]) + '&';
+    }
+    if (uri.slice(-1) == "&")
+        uri = uri.substring(0, uri.length - 1);
+    if (uri == '?')
+        uri = window.location.href.split('?')[0];
+    return uri;
+}
+function find_child(node, selector) {
+    var children = node.querySelectorAll(selector);
+    if (children.length) return children[0];
+    return;
+}
+function find_group(node) {
+    var parent = node.parentElement;
+    if (!parent) return;
+    if (parent.id == "frames") return node;
+    return find_group(parent);
+}
+function orig_save(e, attr, val) {
+    if (e.attributes["fg:orig_" + attr] != undefined) return;
+    if (e.attributes[attr] == undefined) return;
+    if (val == undefined) val = e.attributes[attr].value;
+    e.setAttribute("fg:orig_" + attr, val);
+}
+function orig_load(e, attr) {
+    if (e.attributes["fg:orig_"+attr] == undefined) return;
+    e.attributes[attr].value = e.attributes["fg:orig_" + attr].value;
+    e.removeAttribute("fg:orig_" + attr);
+}
+function g_to_text(e) {
+    var text = find_child(e, "title").firstChild.nodeValue;
+    return (text)
+}
+function g_to_func(e) {
+    var func = g_to_text(e);
+    // if there's any manipulation we want to do to the function
+    // name before it's searched, do it here before returning.
+    return (func);
+}
+function update_text(e) {
+    var r = find_child(e, "rect");
+    var t = find_child(e, "text");
+    var w = parseFloat(r.attributes.width.value) * frames.attributes.width.value / 100 - 3;
+    var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+    t.attributes.x.value = format_percent((parseFloat(r.attributes.x.value) + (100 * 3 / frames.attributes.width.value)));
+    // Smaller than this size won't fit anything
+    if (w < 2 * fontsize * fontwidth) {
+        t.textContent = "";
+        return;
+    }
+    t.textContent = txt;
+    // Fit in full text width
+    if (/^ *\$/.test(txt) || t.getComputedTextLength() < w)
+        return;
+    if (truncate_text_right) {
+        // Truncate the right side of the text.
+        for (var x = txt.length - 2; x > 0; x--) {
+            if (t.getSubStringLength(0, x + 2) <= w) {
+                t.textContent = txt.substring(0, x) + "..";
+                return;
+            }
+        }
+    } else {
+        // Truncate the left side of the text.
+        for (var x = 2; x < txt.length; x++) {
+            if (t.getSubStringLength(x - 2, txt.length) <= w) {
+                t.textContent = ".." + txt.substring(x, txt.length);
+                return;
+            }
+        }
+    }
+    t.textContent = "";
+}
+// zoom
+function zoom_reset(e) {
+    if (e.tagName == "rect") {
+        e.attributes.x.value = format_percent(100 * parseInt(e.attributes["fg:x"].value) / total_samples);
+        e.attributes.width.value = format_percent(100 * parseInt(e.attributes["fg:w"].value) / total_samples);
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_reset(c[i]);
+    }
+}
+function zoom_child(e, x, zoomed_width_samples) {
+    if (e.tagName == "text") {
+        var parent_x = parseFloat(find_child(e.parentNode, "rect[x]").attributes.x.value);
+        e.attributes.x.value = format_percent(parent_x + (100 * 3 / frames.attributes.width.value));
+    } else if (e.tagName == "rect") {
+        e.attributes.x.value = format_percent(100 * (parseInt(e.attributes["fg:x"].value) - x) / zoomed_width_samples);
+        e.attributes.width.value = format_percent(100 * parseInt(e.attributes["fg:w"].value) / zoomed_width_samples);
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_child(c[i], x, zoomed_width_samples);
+    }
+}
+function zoom_parent(e) {
+    if (e.attributes) {
+        if (e.attributes.x != undefined) {
+            e.attributes.x.value = "0.0%";
+        }
+        if (e.attributes.width != undefined) {
+            e.attributes.width.value = "100.0%";
+        }
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_parent(c[i]);
+    }
+}
+function zoom(node) {
+    var attr = find_child(node, "rect").attributes;
+    var width = parseInt(attr["fg:w"].value);
+    var xmin = parseInt(attr["fg:x"].value);
+    var xmax = xmin + width;
+    var ymin = parseFloat(attr.y.value);
+    unzoombtn.classList.remove("hide");
+    var el = frames.children;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        var a = find_child(e, "rect").attributes;
+        var ex = parseInt(a["fg:x"].value);
+        var ew = parseInt(a["fg:w"].value);
+        // Is it an ancestor
+        if (!inverted) {
+            var upstack = parseFloat(a.y.value) > ymin;
+        } else {
+            var upstack = parseFloat(a.y.value) < ymin;
+        }
+        if (upstack) {
+            // Direct ancestor
+            if (ex <= xmin && (ex+ew) >= xmax) {
+                e.classList.add("parent");
+                zoom_parent(e);
+                update_text(e);
+            }
+            // not in current path
+            else
+                e.classList.add("hide");
+        }
+        // Children maybe
+        else {
+            // no common path
+            if (ex < xmin || ex >= xmax) {
+                e.classList.add("hide");
+            }
+            else {
+                zoom_child(e, xmin, width);
+                update_text(e);
+            }
+        }
+    }
+}
+function unzoom() {
+    unzoombtn.classList.add("hide");
+    var el = frames.children;
+    for(var i = 0; i < el.length; i++) {
+        el[i].classList.remove("parent");
+        el[i].classList.remove("hide");
+        zoom_reset(el[i]);
+        update_text(el[i]);
+    }
+}
+// search
+function reset_search() {
+    var el = document.querySelectorAll("#frames rect");
+    for (var i = 0; i < el.length; i++) {
+        orig_load(el[i], "fill")
+    }
+    var params = get_params();
+    delete params.s;
+    history.replaceState(null, null, parse_params(params));
+}
+function search_prompt() {
+    if (!searching) {
+        var term = prompt("Enter a search term (regexp " +
+            "allowed, eg: ^ext4_)", "");
+        if (term != null) {
+            search(term)
+        }
+    } else {
+        reset_search();
+        searching = 0;
+        searchbtn.classList.remove("show");
+        searchbtn.firstChild.nodeValue = "Search"
+        matchedtxt.classList.add("hide");
+        matchedtxt.firstChild.nodeValue = ""
+    }
+}
+function search(term) {
+    var re = new RegExp(term);
+    var el = frames.children;
+    var matches = new Object();
+    var maxwidth = 0;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        // Skip over frames which are either not visible, or below the zoomed-to frame
+        if (e.classList.contains("hide") || e.classList.contains("parent")) {
+            continue;
+        }
+        var func = g_to_func(e);
+        var rect = find_child(e, "rect");
+        if (func == null || rect == null)
+            continue;
+        // Save max width. Only works as we have a root frame
+        var w = parseInt(rect.attributes["fg:w"].value);
+        if (w > maxwidth)
+            maxwidth = w;
+        if (func.match(re)) {
+            // highlight
+            var x = parseInt(rect.attributes["fg:x"].value);
+            orig_save(rect, "fill");
+            rect.attributes.fill.value = searchcolor;
+            // remember matches
+            if (matches[x] == undefined) {
+                matches[x] = w;
+            } else {
+                if (w > matches[x]) {
+                    // overwrite with parent
+                    matches[x] = w;
+                }
+            }
+            searching = 1;
+        }
+    }
+    if (!searching)
+        return;
+    var params = get_params();
+    params.s = term;
+    history.replaceState(null, null, parse_params(params));
+
+    searchbtn.classList.add("show");
+    searchbtn.firstChild.nodeValue = "Reset Search";
+    // calculate percent matched, excluding vertical overlap
+    var count = 0;
+    var lastx = -1;
+    var lastw = 0;
+    var keys = Array();
+    for (k in matches) {
+        if (matches.hasOwnProperty(k))
+            keys.push(k);
+    }
+    // sort the matched frames by their x location
+    // ascending, then width descending
+    keys.sort(function(a, b){
+        return a - b;
+    });
+    // Step through frames saving only the biggest bottom-up frames
+    // thanks to the sort order. This relies on the tree property
+    // where children are always smaller than their parents.
+    for (var k in keys) {
+        var x = parseInt(keys[k]);
+        var w = matches[keys[k]];
+        if (x >= lastx + lastw) {
+            count += w;
+            lastx = x;
+            lastw = w;
+        }
+    }
+    // display matched percent
+    matchedtxt.classList.remove("hide");
+    var pct = 100 * count / maxwidth;
+    if (pct != 100) pct = pct.toFixed(1);
+    matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+}
+function format_percent(n) {
+    return n.toFixed(4) + "%";
+}
+]]></script>
+    <rect x="0" y="0" width="100%" height="2304" fill="url(#background)"/>
+    <text id="title" x="50.0000%" y="32.00">Peak Tracked Memory Usage (10529.2 MiB)</text>
+    <text id="subtitle" x="50.0000%" y="64.00">Made with the Fil profiler. <a href="https://pythonspeed.com/fil/" style="text-decoration: underline;" target="_parent">Try it on your code!</a></text>
+    <text id="details" x="10" y="84.00"> </text>
+    <text id="unzoom" class="hide" x="10" y="32.00">Reset Zoom</text>
+    <text id="search" x="1090" y="32.00">Search</text>
+    <text id="matched" x="1090" y="2291.00"> </text>
+    <svg id="frames" x="10" width="1180" total_samples="11019735167">
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/numpy/core/overrides.py:7 (&lt;module&gt;) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1706" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1719.50">/home/jo..</text>
+        </g>
+        <g>
+            <title>from numpy.core._multiarray_umath import ( (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1728" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1741.50">from nu..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1750" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1763.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1772" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1785.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1794" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1807.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1816" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1829.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:666 (_load_unlocked) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1838" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1851.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1860" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1873.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:565 (module_from_spec) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1882" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1895.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1904" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1917.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:1173 (create_module) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1926" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1939.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1948" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1961.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1970" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="1983.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,886,104 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1992" width="8.5291%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939886104"/>
+            <text x="0.2542%" y="2005.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/numpy/core/__init__.py:22 (&lt;module&gt;) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1002" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1015.50">/home/jo..</text>
+        </g>
+        <g>
+            <title>    from . import multiarray (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1024" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1037.50">    fro..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1058 (_handle_fromlist) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1046" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1059.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1068" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1090" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1103.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1112" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1134" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1147.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1156" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1178" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1191.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1200" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1222" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1235.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,051,543 bytes, 8.53%)</title>
+            <rect x="0.0036%" y="1244" width="8.5306%" height="21" fill="rgb(255,206,206)" fg:x="393302" fg:w="940051543"/>
+            <text x="0.2536%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1266" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1279.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1288" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1301.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1310" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1323.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1332" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1345.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/numpy/core/multiarray.py:12 (&lt;module&gt;) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1354" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1367.50">/home/jo..</text>
+        </g>
+        <g>
+            <title>from . import overrides (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1376" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1389.50">from . ..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1058 (_handle_fromlist) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1398" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1411.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1420" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1442" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1455.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1464" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1486" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1499.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1508" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1521.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1530" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1543.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1552" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1565.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1574" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1587.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1596" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1609.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1618" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1631.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1640" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1653.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1662" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1675.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (939,986,983 bytes, 8.53%)</title>
+            <rect x="0.0042%" y="1684" width="8.5300%" height="21" fill="rgb(255,206,206)" fg:x="457862" fg:w="939986983"/>
+            <text x="0.2542%" y="1697.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/numpy/__init__.py:150 (&lt;module&gt;) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="650" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="663.50">/home/jo..</text>
+        </g>
+        <g>
+            <title>    from . import core (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="672" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="685.50">    fro..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1058 (_handle_fromlist) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="694" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="707.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="716" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="738" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="751.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="760" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="782" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="795.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="804" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="826" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="839.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="848" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="870" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="883.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="892" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="905.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="914" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="927.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="936" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="949.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="958" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="971.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (940,607,182 bytes, 8.54%)</title>
+            <rect x="0.0025%" y="980" width="8.5357%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="940607182"/>
+            <text x="0.2525%" y="993.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/__init__.py:11 (&lt;module&gt;) (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="386" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="399.50">/home/jo..</text>
+        </g>
+        <g>
+            <title>        __import__(dependency) (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="408" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="421.50">       ..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="430" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="443.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="452" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="474" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="487.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="496" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="518" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="531.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (942,175,462 bytes, 8.55%)</title>
+            <rect x="0.0019%" y="540" width="8.5499%" height="21" fill="rgb(255,206,206)" fg:x="207696" fg:w="942175462"/>
+            <text x="0.2519%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (942,104,328 bytes, 8.55%)</title>
+            <rect x="0.0025%" y="562" width="8.5492%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="942104328"/>
+            <text x="0.2525%" y="575.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (942,104,328 bytes, 8.55%)</title>
+            <rect x="0.0025%" y="584" width="8.5492%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="942104328"/>
+            <text x="0.2525%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (942,104,328 bytes, 8.55%)</title>
+            <rect x="0.0025%" y="606" width="8.5492%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="942104328"/>
+            <text x="0.2525%" y="619.50">&lt;frozen ..</text>
+        </g>
+        <g>
+            <title> (942,104,328 bytes, 8.55%)</title>
+            <rect x="0.0025%" y="628" width="8.5492%" height="21" fill="rgb(255,206,206)" fg:x="278830" fg:w="942104328"/>
+            <text x="0.2525%" y="641.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:666 (_load_unlocked) (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1310" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1323.50"></text>
+        </g>
+        <g>
+            <title> (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1332" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1345.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:565 (module_from_spec) (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1354" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1367.50"></text>
+        </g>
+        <g>
+            <title> (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1376" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1389.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:1173 (create_module) (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1398" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1411.50"></text>
+        </g>
+        <g>
+            <title> (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1420" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1442" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1455.50"></text>
+        </g>
+        <g>
+            <title> (8,650,087 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1464" width="0.0785%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="8650087"/>
+            <text x="8.8179%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/__init__.py:22 (&lt;module&gt;) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="386" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="399.50"></text>
+        </g>
+        <g>
+            <title>from pandas.compat import is_numpy_dev as _is_numpy_dev (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="408" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="421.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="430" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="443.50"></text>
+        </g>
+        <g>
+            <title> (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="452" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="474" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="487.50"></text>
+        </g>
+        <g>
+            <title> (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="496" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="518" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="531.50"></text>
+        </g>
+        <g>
+            <title> (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="540" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="562" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="575.50"></text>
+        </g>
+        <g>
+            <title> (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="584" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="606" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="619.50"></text>
+        </g>
+        <g>
+            <title> (10,284,270 bytes, 0.09%)</title>
+            <rect x="8.5580%" y="628" width="0.0933%" height="21" fill="rgb(255,245,245)" fg:x="943073597" fg:w="10284270"/>
+            <text x="8.8080%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/compat/__init__.py:20 (&lt;module&gt;) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="650" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="663.50"></text>
+        </g>
+        <g>
+            <title>from pandas.compat.pyarrow import ( (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="672" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="694" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="716" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="738" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="760" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="782" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="804" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="826" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="848" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="870" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="892" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="905.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/compat/pyarrow.py:6 (&lt;module&gt;) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="914" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="927.50"></text>
+        </g>
+        <g>
+            <title>    import pyarrow as pa (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="936" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="949.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="958" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="971.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="980" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="993.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1002" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1015.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1024" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1037.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1046" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1059.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1068" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1090" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1103.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1112" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1134" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1147.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1156" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pyarrow/__init__.py:63 (&lt;module&gt;) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1178" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1191.50"></text>
+        </g>
+        <g>
+            <title>import pyarrow.lib as _lib (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1200" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1222" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1235.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1244" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1266" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1279.50"></text>
+        </g>
+        <g>
+            <title> (9,202,021 bytes, 0.08%)</title>
+            <rect x="8.5679%" y="1288" width="0.0835%" height="21" fill="rgb(255,245,245)" fg:x="944155846" fg:w="9202021"/>
+            <text x="8.8179%" y="1301.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/indexes/base.py:143 (&lt;module&gt;) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1442" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1455.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.arrays.sparse import SparseDtype (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1464" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1486" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1499.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1508" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1521.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1530" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1543.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1552" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1565.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1574" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1587.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1596" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1609.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1618" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1631.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1640" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1653.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1662" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1675.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1684" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1697.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/arrays/sparse/__init__.py:3 (&lt;module&gt;) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1706" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1719.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.arrays.sparse.accessor import ( (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1728" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1741.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1750" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1763.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1772" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1785.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1794" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1807.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1816" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1829.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1838" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1851.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1860" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1873.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1882" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1895.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1904" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1917.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1926" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1939.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1948" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1961.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/arrays/sparse/accessor.py:13 (&lt;module&gt;) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1970" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="1983.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.arrays.sparse.array import SparseArray (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1992" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2005.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2014" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2027.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2036" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2049.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2058" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2071.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2080" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2093.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2102" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2115.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2124" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2137.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:846 (exec_module) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2146" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2159.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2168" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2181.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:978 (get_code) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2190" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2203.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2212" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2225.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:647 (_compile_bytecode) (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2234" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2247.50"></text>
+        </g>
+        <g>
+            <title> (1,384,637 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="2256" width="0.0126%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1384637"/>
+            <text x="8.9062%" y="2269.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/arrays/__init__.py:11 (&lt;module&gt;) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="914" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="927.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.arrays.interval import IntervalArray (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="936" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="949.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="958" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="971.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="980" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="993.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1002" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1015.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1024" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1037.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1046" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1059.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1068" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1090" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1103.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1112" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1134" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1147.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1156" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/arrays/interval.py:90 (&lt;module&gt;) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1178" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1191.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.indexes.base import ensure_index (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1200" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1222" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1235.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1244" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1266" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1279.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1288" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1301.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1310" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1323.50"></text>
+        </g>
+        <g>
+            <title> (1,760,200 bytes, 0.02%)</title>
+            <rect x="8.6534%" y="1332" width="0.0160%" height="21" fill="rgb(255,248,248)" fg:x="953579325" fg:w="1760200"/>
+            <text x="8.9034%" y="1345.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (1,454,159 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1354" width="0.0132%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1454159"/>
+            <text x="8.9062%" y="1367.50"></text>
+        </g>
+        <g>
+            <title> (1,454,159 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1376" width="0.0132%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1454159"/>
+            <text x="8.9062%" y="1389.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (1,454,159 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1398" width="0.0132%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1454159"/>
+            <text x="8.9062%" y="1411.50"></text>
+        </g>
+        <g>
+            <title> (1,454,159 bytes, 0.01%)</title>
+            <rect x="8.6562%" y="1420" width="0.0132%" height="21" fill="rgb(255,248,248)" fg:x="953885366" fg:w="1454159"/>
+            <text x="8.9062%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/api.py:29 (&lt;module&gt;) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="650" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="663.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.arrays import Categorical (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="672" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="694" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="716" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="738" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="760" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="782" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="804" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="826" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="848" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="870" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (3,417,554 bytes, 0.03%)</title>
+            <rect x="8.6520%" y="892" width="0.0310%" height="21" fill="rgb(255,247,247)" fg:x="953432031" fg:w="3417554"/>
+            <text x="8.9020%" y="905.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:157 (&lt;module&gt;) (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1442" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1455.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.generic import NDFrame (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1464" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1477.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1486" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1499.50"></text>
+        </g>
+        <g>
+            <title> (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1508" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1521.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1530" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1543.50"></text>
+        </g>
+        <g>
+            <title> (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1552" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1565.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1574" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1587.50"></text>
+        </g>
+        <g>
+            <title> (1,246,235 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1596" width="0.0113%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1246235"/>
+            <text x="8.9384%" y="1609.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/groupby/generic.py:70 (&lt;module&gt;) (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1178" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1191.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.frame import DataFrame (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1200" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1222" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1235.50"></text>
+        </g>
+        <g>
+            <title> (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1244" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1266" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1279.50"></text>
+        </g>
+        <g>
+            <title> (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1288" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1301.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1310" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1323.50"></text>
+        </g>
+        <g>
+            <title> (1,946,821 bytes, 0.02%)</title>
+            <rect x="8.6845%" y="1332" width="0.0177%" height="21" fill="rgb(255,248,248)" fg:x="957007427" fg:w="1946821"/>
+            <text x="8.9345%" y="1345.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (1,513,429 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1354" width="0.0137%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1513429"/>
+            <text x="8.9384%" y="1367.50"></text>
+        </g>
+        <g>
+            <title> (1,513,429 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1376" width="0.0137%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1513429"/>
+            <text x="8.9384%" y="1389.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (1,513,429 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1398" width="0.0137%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1513429"/>
+            <text x="8.9384%" y="1411.50"></text>
+        </g>
+        <g>
+            <title> (1,513,429 bytes, 0.01%)</title>
+            <rect x="8.6884%" y="1420" width="0.0137%" height="21" fill="rgb(255,248,248)" fg:x="957440819" fg:w="1513429"/>
+            <text x="8.9384%" y="1433.50"></text>
+        </g>
+        <g>
+            <title>bench_pyogrio.py:37 (&lt;module&gt;) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="122" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="135.50">bench_pyo..</text>
+        </g>
+        <g>
+            <title>import pandas as pd (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="144" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="157.50">import p..</text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="166" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="179.50">&lt;frozen i..</text>
+        </g>
+        <g>
+            <title> (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="188" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="201.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="210" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="223.50">&lt;frozen i..</text>
+        </g>
+        <g>
+            <title> (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="232" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="245.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="254" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="267.50">&lt;frozen i..</text>
+        </g>
+        <g>
+            <title> (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="276" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="289.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="298" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="311.50">&lt;frozen i..</text>
+        </g>
+        <g>
+            <title> (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="320" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="333.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="342" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="355.50">&lt;frozen i..</text>
+        </g>
+        <g>
+            <title> (959,043,363 bytes, 8.70%)</title>
+            <rect x="0.0019%" y="364" width="8.7030%" height="21" fill="rgb(255,205,205)" fg:x="207696" fg:w="959043363"/>
+            <text x="0.2519%" y="377.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/__init__.py:48 (&lt;module&gt;) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="386" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="399.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.api import ( (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="408" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="421.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="430" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="443.50"></text>
+        </g>
+        <g>
+            <title> (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="452" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="474" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="487.50"></text>
+        </g>
+        <g>
+            <title> (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="496" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="518" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="531.50"></text>
+        </g>
+        <g>
+            <title> (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="540" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="562" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="575.50"></text>
+        </g>
+        <g>
+            <title> (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="584" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="606" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="619.50"></text>
+        </g>
+        <g>
+            <title> (5,893,192 bytes, 0.05%)</title>
+            <rect x="8.6514%" y="628" width="0.0535%" height="21" fill="rgb(255,246,246)" fg:x="953357867" fg:w="5893192"/>
+            <text x="8.9014%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/api.py:48 (&lt;module&gt;) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="650" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="663.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.groupby import ( (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="672" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="685.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="694" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="707.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="716" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="738" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="760" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="782" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="804" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="826" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="848" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="870" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="892" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="905.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/groupby/__init__.py:1 (&lt;module&gt;) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="914" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="927.50"></text>
+        </g>
+        <g>
+            <title>from pandas.core.groupby.generic import ( (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="936" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="949.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="958" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="971.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="980" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="993.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="1002" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="1015.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="1024" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="1037.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="1046" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="1059.50"></text>
+        </g>
+        <g>
+            <title> (2,401,474 bytes, 0.02%)</title>
+            <rect x="8.6831%" y="1068" width="0.0218%" height="21" fill="rgb(255,247,247)" fg:x="956849585" fg:w="2401474"/>
+            <text x="8.9331%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (2,316,123 bytes, 0.02%)</title>
+            <rect x="8.6838%" y="1090" width="0.0210%" height="21" fill="rgb(255,247,247)" fg:x="956934936" fg:w="2316123"/>
+            <text x="8.9338%" y="1103.50"></text>
+        </g>
+        <g>
+            <title> (2,316,123 bytes, 0.02%)</title>
+            <rect x="8.6838%" y="1112" width="0.0210%" height="21" fill="rgb(255,247,247)" fg:x="956934936" fg:w="2316123"/>
+            <text x="8.9338%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (2,316,123 bytes, 0.02%)</title>
+            <rect x="8.6838%" y="1134" width="0.0210%" height="21" fill="rgb(255,247,247)" fg:x="956934936" fg:w="2316123"/>
+            <text x="8.9338%" y="1147.50"></text>
+        </g>
+        <g>
+            <title> (2,316,123 bytes, 0.02%)</title>
+            <rect x="8.6838%" y="1156" width="0.0210%" height="21" fill="rgb(255,247,247)" fg:x="956934936" fg:w="2316123"/>
+            <text x="8.9338%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/__init__.py:1 (&lt;module&gt;) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="386" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="399.50"></text>
+        </g>
+        <g>
+            <title>from geopandas._config import options  # noqa (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="408" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="421.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="430" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="443.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="452" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="465.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="474" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="487.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="496" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="509.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="518" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="531.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="540" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="553.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="562" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="575.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="584" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="597.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="606" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="619.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="628" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="641.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/_config.py:109 (&lt;module&gt;) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="650" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="663.50"></text>
+        </g>
+        <g>
+            <title>    default_value=_default_use_pygeos(), (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="672" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/_config.py:95 (_default_use_pygeos) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="694" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="707.50"></text>
+        </g>
+        <g>
+            <title>    import geopandas._compat as compat (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="716" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="729.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="738" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="751.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="760" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="773.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="782" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="795.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="804" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="817.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="826" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="839.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="848" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="861.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="870" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="883.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="892" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="905.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="914" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="927.50"></text>
+        </g>
+        <g>
+            <title> (3,581,241 bytes, 0.03%)</title>
+            <rect x="8.7048%" y="936" width="0.0325%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3581241"/>
+            <text x="8.9548%" y="949.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/_compat.py:9 (&lt;module&gt;) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="958" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="971.50"></text>
+        </g>
+        <g>
+            <title>import pyproj (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="980" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="993.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1002" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1015.50"></text>
+        </g>
+        <g>
+            <title> (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1024" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1037.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1046" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1059.50"></text>
+        </g>
+        <g>
+            <title> (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1068" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1081.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1090" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1103.50"></text>
+        </g>
+        <g>
+            <title> (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1112" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1125.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1134" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1147.50"></text>
+        </g>
+        <g>
+            <title> (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1156" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1169.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1178" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1191.50"></text>
+        </g>
+        <g>
+            <title> (3,451,449 bytes, 0.03%)</title>
+            <rect x="8.7060%" y="1200" width="0.0313%" height="21" fill="rgb(255,247,247)" fg:x="959380851" fg:w="3451449"/>
+            <text x="8.9560%" y="1213.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pyproj/__init__.py:89 (&lt;module&gt;) (2,625,881 bytes, 0.02%)</title>
+            <rect x="8.7135%" y="1222" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="960206419" fg:w="2625881"/>
+            <text x="8.9635%" y="1235.50"></text>
+        </g>
+        <g>
+            <title>    _pyproj_global_context_initialize() (2,625,881 bytes, 0.02%)</title>
+            <rect x="8.7135%" y="1244" width="0.0238%" height="21" fill="rgb(255,247,247)" fg:x="960206419" fg:w="2625881"/>
+            <text x="8.9635%" y="1257.50"></text>
+        </g>
+        <g>
+            <title>bench_pyogrio.py:38 (&lt;module&gt;) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="122" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="135.50"></text>
+        </g>
+        <g>
+            <title>import geopandas (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="144" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="157.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:1007 (_find_and_load) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="166" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="179.50"></text>
+        </g>
+        <g>
+            <title> (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="188" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="201.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:986 (_find_and_load_unlocked) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="210" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="223.50"></text>
+        </g>
+        <g>
+            <title> (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="232" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="245.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:680 (_load_unlocked) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="254" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="267.50"></text>
+        </g>
+        <g>
+            <title> (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="276" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="289.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap_external&gt;:850 (exec_module) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="298" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="311.50"></text>
+        </g>
+        <g>
+            <title> (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="320" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="333.50"></text>
+        </g>
+        <g>
+            <title>&lt;frozen importlib._bootstrap&gt;:228 (_call_with_frames_removed) (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="342" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="355.50"></text>
+        </g>
+        <g>
+            <title> (3,983,484 bytes, 0.04%)</title>
+            <rect x="8.7048%" y="364" width="0.0361%" height="21" fill="rgb(255,247,247)" fg:x="959251059" fg:w="3983484"/>
+            <text x="8.9548%" y="377.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:639 (from_features) (4,174,862,768 bytes, 37.89%)</title>
+            <rect x="8.7569%" y="254" width="37.8853%" height="21" fill="rgb(255,157,157)" fg:x="964986435" fg:w="4174862768"/>
+            <text x="9.0069%" y="267.50">/home/joris/scipy/geopandas/geopandas/geodataf..</text>
+        </g>
+        <g>
+            <title>        for feature in features_lst: (4,174,862,768 bytes, 37.89%)</title>
+            <rect x="8.7569%" y="276" width="37.8853%" height="21" fill="rgb(255,157,157)" fg:x="964986435" fg:w="4174862768"/>
+            <text x="9.0069%" y="289.50">        for feature in features_lst:..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/multipolygon.py:149 (geos_multipolygon_from_py) (1,870,868 bytes, 0.02%)</title>
+            <rect x="48.0886%" y="386" width="0.0170%" height="21" fill="rgb(255,248,248)" fg:x="5299234883" fg:w="1870868"/>
+            <text x="48.3386%" y="399.50"></text>
+        </g>
+        <g>
+            <title>    subs = (c_void_p * L)() (1,870,868 bytes, 0.02%)</title>
+            <rect x="48.0886%" y="408" width="0.0170%" height="21" fill="rgb(255,248,248)" fg:x="5299234883" fg:w="1870868"/>
+            <text x="48.3386%" y="421.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/polygon.py:539 (geos_polygon_from_py) (958,121,610 bytes, 8.69%)</title>
+            <rect x="48.1056%" y="430" width="8.6946%" height="21" fill="rgb(255,205,205)" fg:x="5301105751" fg:w="958121610"/>
+            <text x="48.3556%" y="443.50">/home/jor..</text>
+        </g>
+        <g>
+            <title>        ret = geos_linearring_from_py(shell) (958,121,610 bytes, 8.69%)</title>
+            <rect x="48.1056%" y="452" width="8.6946%" height="21" fill="rgb(255,205,205)" fg:x="5301105751" fg:w="958121610"/>
+            <text x="48.3556%" y="465.50">        ..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/polygon.py:562 (geos_polygon_from_py) (1,324,888 bytes, 0.01%)</title>
+            <rect x="56.8002%" y="430" width="0.0120%" height="21" fill="rgb(255,248,248)" fg:x="6259227361" fg:w="1324888"/>
+            <text x="57.0502%" y="443.50"></text>
+        </g>
+        <g>
+            <title>                geom, ndim = geos_linearring_from_py(ob[l]) (1,324,888 bytes, 0.01%)</title>
+            <rect x="56.8002%" y="452" width="0.0120%" height="21" fill="rgb(255,248,248)" fg:x="6259227361" fg:w="1324888"/>
+            <text x="57.0502%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/multipolygon.py:151 (geos_multipolygon_from_py) (1,198,563,810 bytes, 10.88%)</title>
+            <rect x="48.1056%" y="386" width="10.8765%" height="21" fill="rgb(255,200,200)" fg:x="5301105751" fg:w="1198563810"/>
+            <text x="48.3556%" y="399.50">/home/joris..</text>
+        </g>
+        <g>
+            <title>        geom, ndims = polygon.geos_polygon_from_py(ob[l][0], ob[l][1:]) (1,198,563,810 bytes, 10.88%)</title>
+            <rect x="48.1056%" y="408" width="10.8765%" height="21" fill="rgb(255,200,200)" fg:x="5301105751" fg:w="1198563810"/>
+            <text x="48.3556%" y="421.50">        ge..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/polygon.py:569 (geos_polygon_from_py) (239,117,312 bytes, 2.17%)</title>
+            <rect x="56.8122%" y="430" width="2.1699%" height="21" fill="rgb(255,227,227)" fg:x="6260552249" fg:w="239117312"/>
+            <text x="57.0622%" y="443.50"></text>
+        </g>
+        <g>
+            <title>            lgeos.GEOSGeom_createPolygon( (239,117,312 bytes, 2.17%)</title>
+            <rect x="56.8122%" y="452" width="2.1699%" height="21" fill="rgb(255,227,227)" fg:x="6260552249" fg:w="239117312"/>
+            <text x="57.0622%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/multipolygon.py:62 (__init__) (1,545,766,470 bytes, 14.03%)</title>
+            <rect x="48.0886%" y="342" width="14.0273%" height="21" fill="rgb(255,193,193)" fg:x="5299234883" fg:w="1545766470"/>
+            <text x="48.3386%" y="355.50">/home/joris/min..</text>
+        </g>
+        <g>
+            <title>            geom, n = geos_multipolygon_from_py(polygons) (1,545,766,470 bytes, 14.03%)</title>
+            <rect x="48.0886%" y="364" width="14.0273%" height="21" fill="rgb(255,193,193)" fg:x="5299234883" fg:w="1545766470"/>
+            <text x="48.3386%" y="377.50">            ge..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/multipolygon.py:154 (geos_multipolygon_from_py) (345,331,792 bytes, 3.13%)</title>
+            <rect x="58.9821%" y="386" width="3.1338%" height="21" fill="rgb(255,223,223)" fg:x="6499669561" fg:w="345331792"/>
+            <text x="59.2321%" y="399.50">/..</text>
+        </g>
+        <g>
+            <title>    return (lgeos.GEOSGeom_createCollection(6, subs, L), N) (345,331,792 bytes, 3.13%)</title>
+            <rect x="58.9821%" y="408" width="3.1338%" height="21" fill="rgb(255,223,223)" fg:x="6499669561" fg:w="345331792"/>
+            <text x="59.2321%" y="421.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:644 (from_features) (1,837,972,070 bytes, 16.68%)</title>
+            <rect x="46.6422%" y="254" width="16.6789%" height="21" fill="rgb(255,188,188)" fg:x="5139849203" fg:w="1837972070"/>
+            <text x="46.8922%" y="267.50">/home/joris/scipy/g..</text>
+        </g>
+        <g>
+            <title>                &quot;geometry&quot;: shape(feature[&quot;geometry&quot;]) if feature[&quot;geometry&quot;] else None (1,837,972,070 bytes, 16.68%)</title>
+            <rect x="46.6422%" y="276" width="16.6789%" height="21" fill="rgb(255,188,188)" fg:x="5139849203" fg:w="1837972070"/>
+            <text x="46.8922%" y="289.50">                &quot;g..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/geo.py:118 (shape) (1,837,972,070 bytes, 16.68%)</title>
+            <rect x="46.6422%" y="298" width="16.6789%" height="21" fill="rgb(255,188,188)" fg:x="5139849203" fg:w="1837972070"/>
+            <text x="46.8922%" y="311.50">/home/joris/minicon..</text>
+        </g>
+        <g>
+            <title>        return MultiPolygon(ob[&quot;coordinates&quot;], context_type=&apos;geojson&apos;) (1,837,972,070 bytes, 16.68%)</title>
+            <rect x="46.6422%" y="320" width="16.6789%" height="21" fill="rgb(255,188,188)" fg:x="5139849203" fg:w="1837972070"/>
+            <text x="46.8922%" y="333.50">        return Mul..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/multipolygon.py:63 (__init__) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="342" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="355.50"></text>
+        </g>
+        <g>
+            <title>        self._set_geom(geom) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="364" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="377.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/base.py:241 (_set_geom) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="386" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="399.50"></text>
+        </g>
+        <g>
+            <title>        self._empty() (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="408" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="421.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/base.py:199 (_empty) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="430" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="443.50"></text>
+        </g>
+        <g>
+            <title>        self._is_empty = True (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="452" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/shapely/geometry/base.py:250 (__setattr__) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="474" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="487.50"></text>
+        </g>
+        <g>
+            <title>            super().__setattr__(name, value) (132,819,920 bytes, 1.21%)</title>
+            <rect x="62.1158%" y="496" width="1.2053%" height="21" fill="rgb(255,233,233)" fg:x="6845001353" fg:w="132819920"/>
+            <text x="62.3658%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:650 (from_features) (1,912,606,848 bytes, 17.36%)</title>
+            <rect x="63.3211%" y="254" width="17.3562%" height="21" fill="rgb(255,187,187)" fg:x="6977821273" fg:w="1912606848"/>
+            <text x="63.5711%" y="267.50">/home/joris/scipy/ge..</text>
+        </g>
+        <g>
+            <title>            row.update(properties) (1,912,606,848 bytes, 17.36%)</title>
+            <rect x="63.3211%" y="276" width="17.3562%" height="21" fill="rgb(255,187,187)" fg:x="6977821273" fg:w="1912606848"/>
+            <text x="63.5711%" y="289.50">            row.upd..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:651 (from_features) (27,436,288 bytes, 0.25%)</title>
+            <rect x="80.6773%" y="254" width="0.2490%" height="21" fill="rgb(255,242,242)" fg:x="8890428121" fg:w="27436288"/>
+            <text x="80.9273%" y="267.50"></text>
+        </g>
+        <g>
+            <title>            rows.append(row) (27,436,288 bytes, 0.25%)</title>
+            <rect x="80.6773%" y="276" width="0.2490%" height="21" fill="rgb(255,242,242)" fg:x="8890428121" fg:w="27436288"/>
+            <text x="80.9273%" y="289.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:133 (__init__) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="298" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="311.50">/..</text>
+        </g>
+        <g>
+            <title>            super().__init__(data, *args, **kwargs) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="320" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="333.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:729 (__init__) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="342" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="355.50">/..</text>
+        </g>
+        <g>
+            <title>                    mgr = arrays_to_mgr( (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="364" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="377.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/construction.py:156 (arrays_to_mgr) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="386" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="399.50">/..</text>
+        </g>
+        <g>
+            <title>        return create_block_manager_from_column_arrays( (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="408" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="421.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/managers.py:1959 (create_block_manager_from_column_arrays) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="430" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="443.50">/..</text>
+        </g>
+        <g>
+            <title>        mgr._consolidate_inplace() (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="452" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="465.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/managers.py:1685 (_consolidate_inplace) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="474" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="487.50">/..</text>
+        </g>
+        <g>
+            <title>            self.blocks = tuple(_consolidate(self.blocks)) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="496" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="509.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/managers.py:2084 (_consolidate) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="518" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="531.50">/..</text>
+        </g>
+        <g>
+            <title>        merged_blocks = _merge_blocks( (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="540" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="553.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/managers.py:2118 (_merge_blocks) (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="562" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="575.50">/..</text>
+        </g>
+        <g>
+            <title>        new_values = new_values[argsort] (292,204,016 bytes, 2.65%)</title>
+            <rect x="80.9263%" y="584" width="2.6516%" height="21" fill="rgb(255,225,225)" fg:x="8917864409" fg:w="292204016"/>
+            <text x="81.1763%" y="597.50">..</text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:3832 (_set_item) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="430" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="443.50"></text>
+        </g>
+        <g>
+            <title>        value = self._sanitize_column(value) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="452" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:4530 (_sanitize_column) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="474" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="487.50"></text>
+        </g>
+        <g>
+            <title>        return sanitize_array(value, self.index, copy=True, allow_2d=True) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="496" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/construction.py:576 (sanitize_array) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="518" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="531.50"></text>
+        </g>
+        <g>
+            <title>            subarr = subarr.copy() (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="540" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/array.py:951 (copy) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="562" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="575.50"></text>
+        </g>
+        <g>
+            <title>        return GeometryArray(self.data.copy(), crs=self._crs) (26,564,120 bytes, 0.24%)</title>
+            <rect x="83.5779%" y="584" width="0.2411%" height="21" fill="rgb(255,242,242)" fg:x="9210068425" fg:w="26564120"/>
+            <text x="83.8279%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:1456 (__setitem__) (239,078,504 bytes, 2.17%)</title>
+            <rect x="83.5779%" y="342" width="2.1695%" height="21" fill="rgb(255,227,227)" fg:x="9210068425" fg:w="239078504"/>
+            <text x="83.8279%" y="355.50"></text>
+        </g>
+        <g>
+            <title>        super().__setitem__(key, value) (239,078,504 bytes, 2.17%)</title>
+            <rect x="83.5779%" y="364" width="2.1695%" height="21" fill="rgb(255,227,227)" fg:x="9210068425" fg:w="239078504"/>
+            <text x="83.8279%" y="377.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:3655 (__setitem__) (239,078,504 bytes, 2.17%)</title>
+            <rect x="83.5779%" y="386" width="2.1695%" height="21" fill="rgb(255,227,227)" fg:x="9210068425" fg:w="239078504"/>
+            <text x="83.8279%" y="399.50"></text>
+        </g>
+        <g>
+            <title>            self._set_item(key, value) (239,078,504 bytes, 2.17%)</title>
+            <rect x="83.5779%" y="408" width="2.1695%" height="21" fill="rgb(255,227,227)" fg:x="9210068425" fg:w="239078504"/>
+            <text x="83.8279%" y="421.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:3845 (_set_item) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="430" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="443.50"></text>
+        </g>
+        <g>
+            <title>        self._set_item_mgr(key, value) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="452" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="465.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:3804 (_set_item_mgr) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="474" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="487.50"></text>
+        </g>
+        <g>
+            <title>            self._iset_item_mgr(loc, value) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="496" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="509.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/frame.py:3794 (_iset_item_mgr) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="518" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="531.50"></text>
+        </g>
+        <g>
+            <title>        self._mgr.iset(loc, value, inplace=inplace) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="540" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="553.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/managers.py:1141 (iset) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="562" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="575.50"></text>
+        </g>
+        <g>
+            <title>                    blk.delete(blk_locs) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="584" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="597.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/pandas/core/internals/blocks.py:388 (delete) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="606" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="619.50"></text>
+        </g>
+        <g>
+            <title>        self.values = np.delete(self.values, loc, 0)  # type: ignore[arg-type] (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="628" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="641.50"></text>
+        </g>
+        <g>
+            <title>&lt;__array_function__ internals&gt;:5 (delete) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="650" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="663.50"></text>
+        </g>
+        <g>
+            <title> (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="672" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="685.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/miniconda3/envs/geo-dev/lib/python3.9/site-packages/numpy/lib/function_base.py:4555 (delete) (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="694" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="707.50"></text>
+        </g>
+        <g>
+            <title>        new = arr[tuple(slobj)] (212,514,384 bytes, 1.93%)</title>
+            <rect x="83.8190%" y="716" width="1.9285%" height="21" fill="rgb(255,229,229)" fg:x="9236632545" fg:w="212514384"/>
+            <text x="84.0690%" y="729.50"></text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/_vectorized.py:114 (from_shapely) (1,570,457,833 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="430" width="14.2513%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570457833"/>
+            <text x="85.9975%" y="443.50">/home/joris/scip..</text>
+        </g>
+        <g>
+            <title>            return pygeos.from_shapely(arr) (1,570,457,833 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="452" width="14.2513%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570457833"/>
+            <text x="85.9975%" y="465.50">            ret..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/repos/pygeos/pygeos/io.py:516 (from_shapely) (1,570,457,833 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="474" width="14.2513%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570457833"/>
+            <text x="85.9975%" y="487.50">/home/joris/scip..</text>
+        </g>
+        <g>
+            <title>        return lib.from_shapely(arr, **kwargs) (1,570,457,833 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="496" width="14.2513%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570457833"/>
+            <text x="85.9975%" y="509.50">        return ..</text>
+        </g>
+        <g>
+            <title>all (11,019,735,167 bytes, 100%)</title>
+            <rect x="0.0000%" y="100" width="100.0000%" height="21" fill="rgb(255,100,100)" fg:x="0" fg:w="11019735167"/>
+            <text x="0.2500%" y="113.50"></text>
+        </g>
+        <g>
+            <title>bench_pyogrio.py:56 (&lt;module&gt;) (10,056,500,624 bytes, 91.26%)</title>
+            <rect x="8.7410%" y="122" width="91.2590%" height="21" fill="rgb(255,106,106)" fg:x="963234543" fg:w="10056500624"/>
+            <text x="8.9910%" y="135.50">bench_pyogrio.py:56 (&lt;module&gt;)</text>
+        </g>
+        <g>
+            <title>    _ = geopandas.read_file(DATA_DIR / filename, engine=engine) (10,056,500,624 bytes, 91.26%)</title>
+            <rect x="8.7410%" y="144" width="91.2590%" height="21" fill="rgb(255,106,106)" fg:x="963234543" fg:w="10056500624"/>
+            <text x="8.9910%" y="157.50">    _ = geopandas.read_file(DATA_DIR / filename, engine=engine)</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/io/file.py:253 (_read_file) (10,055,508,682 bytes, 91.25%)</title>
+            <rect x="8.7500%" y="166" width="91.2500%" height="21" fill="rgb(255,106,106)" fg:x="964226485" fg:w="10055508682"/>
+            <text x="9.0000%" y="179.50">/home/joris/scipy/geopandas/geopandas/io/file.py:253 (_read_file)</text>
+        </g>
+        <g>
+            <title>        return _read_file_fiona( (10,055,508,682 bytes, 91.25%)</title>
+            <rect x="8.7500%" y="188" width="91.2500%" height="21" fill="rgb(255,106,106)" fg:x="964226485" fg:w="10055508682"/>
+            <text x="9.0000%" y="201.50">        return _read_file_fiona(</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/io/file.py:340 (_read_file_fiona) (10,054,748,732 bytes, 91.24%)</title>
+            <rect x="8.7569%" y="210" width="91.2431%" height="21" fill="rgb(255,106,106)" fg:x="964986435" fg:w="10054748732"/>
+            <text x="9.0069%" y="223.50">/home/joris/scipy/geopandas/geopandas/io/file.py:340 (_read_file_fiona)</text>
+        </g>
+        <g>
+            <title>                df = GeoDataFrame.from_features( (10,054,748,732 bytes, 91.24%)</title>
+            <rect x="8.7569%" y="232" width="91.2431%" height="21" fill="rgb(255,106,106)" fg:x="964986435" fg:w="10054748732"/>
+            <text x="9.0069%" y="245.50">                df = GeoDataFrame.from_features(</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:652 (from_features) (2,101,870,758 bytes, 19.07%)</title>
+            <rect x="80.9263%" y="254" width="19.0737%" height="21" fill="rgb(255,184,184)" fg:x="8917864409" fg:w="2101870758"/>
+            <text x="81.1763%" y="267.50">/home/joris/scipy/geop..</text>
+        </g>
+        <g>
+            <title>        return cls(rows, columns=columns, crs=crs) (2,101,870,758 bytes, 19.07%)</title>
+            <rect x="80.9263%" y="276" width="19.0737%" height="21" fill="rgb(255,184,184)" fg:x="8917864409" fg:w="2101870758"/>
+            <text x="81.1763%" y="289.50">        return cls(ro..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:170 (__init__) (1,809,666,742 bytes, 16.42%)</title>
+            <rect x="83.5779%" y="298" width="16.4221%" height="21" fill="rgb(255,189,189)" fg:x="9210068425" fg:w="1809666742"/>
+            <text x="83.8279%" y="311.50">/home/joris/scipy/..</text>
+        </g>
+        <g>
+            <title>                self[&quot;geometry&quot;] = _ensure_geometry(self[&quot;geometry&quot;].values, crs) (1,809,666,742 bytes, 16.42%)</title>
+            <rect x="83.5779%" y="320" width="16.4221%" height="21" fill="rgb(255,189,189)" fg:x="9210068425" fg:w="1809666742"/>
+            <text x="83.8279%" y="333.50">                s..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/geodataframe.py:62 (_ensure_geometry) (1,570,588,238 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="342" width="14.2525%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570588238"/>
+            <text x="85.9975%" y="355.50">/home/joris/scip..</text>
+        </g>
+        <g>
+            <title>            out = from_shapely(data, crs=crs) (1,570,588,238 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="364" width="14.2525%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570588238"/>
+            <text x="85.9975%" y="377.50">            out..</text>
+        </g>
+        <g>
+            <title>/home/joris/scipy/geopandas/geopandas/array.py:150 (from_shapely) (1,570,588,238 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="386" width="14.2525%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570588238"/>
+            <text x="85.9975%" y="399.50">/home/joris/scip..</text>
+        </g>
+        <g>
+            <title>    return GeometryArray(vectorized.from_shapely(data), crs=crs) (1,570,588,238 bytes, 14.25%)</title>
+            <rect x="85.7475%" y="408" width="14.2525%" height="21" fill="rgb(255,193,193)" fg:x="9449146929" fg:w="1570588238"/>
+            <text x="85.9975%" y="421.50">    return Geom..</text>
+        </g>
+    </svg>
+</svg>
