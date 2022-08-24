@@ -398,7 +398,7 @@ Spatial join (for each bike station, in which district is it located?):
   </table>
   </div>
 
-➔ full code in demo notebook: UPDATE
+➔ full code in [demo notebook in the talks repo](http://nbviewer.org/github/jorisvandenbossche/talks/blob/master/2022_FOSS4G_geopandas/demo/geopandas_demo.ipynb)
 
 ---
 
@@ -481,7 +481,7 @@ geopandas.sjoin_nearest(pois, roads, max_distance=50, distance_col="distance")
 * Better support for GeoDataFrames with multiple geometry columns
 * ... and many bug fixes and small improvements!
 
----
+<!-- ---
 
 ## `xyzservices`: Source of XYZ tiles providers 
 
@@ -501,7 +501,7 @@ Lightweight library providing a collection of available XYZ services offering ra
 'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}' 
 ```
 
-Used by geopandas, contextily, ipyleaflet, leafmap, bokeh, holoviews, ...
+Used by geopandas, contextily, ipyleaflet, leafmap, bokeh, holoviews, ... -->
 
 
 ---
@@ -631,19 +631,21 @@ class GeoSeries:
 
 # Shapely 2.0
 
-Prototyped in PyGEOS, started by Casper van der Wel (https://github.com/pygeos/pygeos/), merged into Shapely to become Shapely 2.0
+Prototyped in PyGEOS, started by Casper van der Wel (https://github.com/pygeos/pygeos/). <br> 
+New way to expose geospatial operations from GEOS into Python:
 
+- array-based + vectorized functions
+- fast
 
+--
+count: false
+
+Merged into Shapely to become Shapely 2.0:
 
 * Code of PyGEOS has been fully integrated into Shapely (including array-based API)
 * Internals of Shapely are refactored to use C extension type instead of `ctypes` for the Geometry class
 * Preserve familiar Shapely interface for single geometries
 * Numpy is now a required dependency
-
-New way to expose geospatial operations from GEOS into Python:
-
-- array-based + vectorized functions
-- fast
 
 ---
 
@@ -892,15 +894,15 @@ count: false
 
 > *Apache Parquet is an **open source**, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is **available in multiple languages** including Java, C++, Python, etc...*
 
+<!-- ---
+count: false
+
+> *Apache Parquet is an open source, **column-oriented** data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle **complex data** in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...* -->
+
 ---
 count: false
 
-> *Apache Parquet is an open source, **column-oriented** data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle **complex data** in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
-
----
-count: false
-
-> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides **efficient data compression and encoding schemes** with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+> *Apache Parquet is an open source, **column-oriented** data file format designed for efficient data storage and retrieval. It provides **efficient data compression and encoding schemes** with enhanced performance to handle **complex data** in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
 
 ---
 count: false
@@ -1093,6 +1095,14 @@ Build new version (needs GEOS and shapely already installed):
 * checkout 'geopandas-cython' branch
 * `make inplace` -->
 
+
+---
+class: center, middle
+
+![:scale 100%](https://docs.dask.org/en/stable/_images/dask-overview.svg)
+
+
+Image from https://docs.dask.org/en/stable/
 ---
 
 .center[
@@ -1111,6 +1121,7 @@ https://github.com/geopandas/dask-geopandas
 
 * Familiar interface for GeoPandas users
 * Parallel IO, elementwise geospatial operations, and spatial join
+* Basic support for spatial partitioning
 
 --
 count: false
@@ -1122,6 +1133,9 @@ count: false
 
 See [static version](https://dask-geopandas.readthedocs.io/en/stable/guide/basic-intro.html)
 ]
+---
+
+<iframe src="https://dask-geopandas.readthedocs.io/en/stable/guide/basic-intro.html" title="Dask-GeoPandas demo" width="100%" height="700px"></iframe> 
 
 ---
 
@@ -1138,6 +1152,9 @@ Many areas for improvement:
 - ...
 
 Young project, but ready to be tried out!
+
+- Documentation: https://dask-geopandas.readthedocs.io/en/stable/guide/basic-intro.html
+- Tutorial: https://github.com/martinfleis/dask-geopandas-tutorial
 
 <!-- ---
 
