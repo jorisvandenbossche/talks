@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Geospatial and Apache Arrow: accelerating geospatial data exchange and compute</title>
+    <meta charset="utf-8" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <meta name="github-repo" content="djnavarro/xaringan-template-voltrondata"/>
+    <meta name="twitter:title" content="Geospatial and Apache Arrow: accelerating geospatial data exchange and compute"/>
+    <meta name="twitter:description" content="Geospatial and Apache Arrow: accelerating geospatial data exchange and compute"/>
+    <meta name="twitter:url" content="https://github.com/geopandas/geo-arrow-spec"/>
+    <meta name="twitter:image" content="https://djnavarro.net/xaringan-template-voltrondata/img/title-slide-image.png"/>
+    <meta name="twitter:image:alt" content="Image showing the title slide. The title in white reads &#39;Voltron Data template for xaringan users&#39;, with &#39;by Danielle Navarro&#39; immediately underneath. The background is dark green, with the Voltron Data &#39;data lake&#39; image shown in light green below the title, and the company logo shown in light green in the top right corner"/>
+    <meta name="twitter:card" content="summary"/>
+    <meta property="og:title" content="Geospatial and Apache Arrow: accelerating geospatial data exchange and compute"/>
+    <meta property="og:description" content="Geospatial and Apache Arrow: accelerating geospatial data exchange and compute"/>
+    <meta property="og:url" content="https://github.com/geopandas/geo-arrow-spec"/>
+    <meta property="og:image" content="https://djnavarro.net/xaringan-template-voltrondata/img/title-slide-image.png"/>
+    <meta property="og:image:alt" content="Image showing the title slide. The title in white reads &#39;Voltron Data template for xaringan users&#39;, with &#39;by Danielle Navarro&#39; immediately underneath. The background is dark green, with the Voltron Data &#39;data lake&#39; image shown in light green below the title, and the company logo shown in light green in the top right corner"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:locale" content="en_US"/>
+    <meta property="article:author" content="Joris Van den Bossche and Dewey Dunnington"/>
+    <link href="libs/font-awesome/css/all.css" rel="stylesheet" />
+    <link href="libs/font-awesome/css/v4-shims.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style/xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="style/voltron-data-style.css" type="text/css" />
+    <link rel="stylesheet" href="style/abs-layout.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+
+
+
+
+
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;
+&lt;span&gt;
+  &lt;!-- 
+  You could put a footer link in here, which I used to do for a lot of my
+  other slide decks, but it probably doesn't work well with this theme
+  --&gt;
+&lt;/span&gt;
+&lt;/div&gt; 
+
+---
+
+
+class: title-slide, theme-green-maximal  <!-- title slide style -->
+
+
+.center[.large[.boldface[Geospatial and Apache Arrow:<br>accelerating geospatial data exchange and compute ]]]  <!-- title, one line -->
+
+.center[.midi[Joris Van den Bossche and Dewey Dunnington]] <!-- author, one line -->
+.center[.midi[Voltron Data]] <!-- general info, one line -->
+
+<!--
+font-size classes (relative to normal 100%)
+
+.larger = 200% 
+.large  = 130% 
+.midi   = 85% 
+.small  = 70% 
+.xsmall = 60% 
+.tiny   = 50% 
+-->
+
+
+---
+class: theme-green-minimal
+
+## About Us
+
+<div>
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
+
+<p>Joris Van den Bossche</p>
+
+<ul style="padding-left: 25px;">
+<li>Arrow Project Management Committee</li>
+<li>Pandas maintaner</li>
+<li>Geopandas maintainer</li>
+</ul>
+
+</div>
+
+<div style="margin-top: 50px;">
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/dewey.jpg" />
+
+<p>Dewey Dunnington</p>
+
+<ul>
+<li>Arrow committer</li>
+<li>r-spatial maintainer</li>
+<li>Ph.D. Earth & Environmental Science</li>
+<ul>
+
+</div>
+
+---
+class: theme-green-maximal
+
+
+## What is Apache Arrow?
+
+> A specification defining a common, language-agnostic <br>
+> in-memory representation for columnar data <br>
+> \+  <br>
+> A multi-language toolbox for accelerated data interchange <br> 
+> and in-memory processing
+
+
+<!-- ## What is Apache Arrow? -->
+
+<!-- - Toolbox for in-memory analytics -->
+<!-- - Toolbox for larger than memory data -->
+<!-- - Toolbox for connecting languages and hardware -->
+<!-- - Efficient, performant, open source -->
+<!-- - Details at [arrow.apache.org](https://arrow.apache.org) -->
+
+
+<!---------------------------------------------------------------------------->
+---
+
+class: theme-green-minimal
+
+## Accelerating data interchange
+
+<p style="margin-bottom: 20px;"><img src="img/data-interchange-1.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+
+<!----------------------------- SLIDE BREAK ----------------------------->
+---
+
+class: theme-green-minimal
+
+## Accelerating data interchange
+
+
+<p style="margin-bottom: 20px;"><img src="img/data-interchange-2.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+
+<!----------------------------- SLIDE BREAK ----------------------------->
+---
+
+class: theme-green-minimal
+
+## Efficient in-memory processing
+
+<p style="margin-bottom: 20px;"><img src="img/simd-1.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+---
+class: theme-green-minimal
+layout: true
+name: parquet
+
+## What is Apache Parquet?
+
+From http://parquet.apache.org/:
+
+.abs-layout.bottom-1.left-50.width-40[
+  ![](img/Apache_Parquet_logo.svg.png)
+]
+
+---
+layout: false
+template: parquet
+count: false
+
+> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+---
+count: false
+
+> *Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. Parquet is available in multiple languages including Java, C++, Python, etc...*
+
+➔ Widely used file format to store large amounts of data (data lakes) for analytical processing, often in cloud context
+
+---
+layout: false
+class: theme-green-minimal
+
+## Apache Arrow
+
+- Fast data access
+- Data interchange (over network, inter-process, in-process)
+- Efficient runtime data structure for analytics
+- Sharing implementations and computational tools
+
+---
+class: theme-green-minimal
+count: false
+
+## Apache Arrow + Geospatial
+
+- Fast data access
+- Data interchange (over network, inter-process, in-process)
+- Efficient runtime data structure for analytics
+- Sharing implementations and computational tools
+
+➔ All relevant for geospatial data as well! (with a focus on tabular vector data)
+
+---
+class: theme-green-minimal
+
+## Data Interchange
+
+![:scale 80%](img/gdal-data-transport-1.svg)
+
+---
+class: theme-green-minimal
+
+## Data Interchange with Apache Arrow
+
+![:scale 80%](img/gdal-data-transport-2.svg)
+
+[RFC 86: Column-oriented read API for vector layers](https://github.com/OSGeo/gdal/pull/5830) by Even Rouault (coming to GDAL 3.6)
+
+---
+
+class: theme-light-minimal
+
+<img style="position: absolute; top: 65px; margin-left: auto; margin-right: auto; left: 0; right: 0; width: 60%;" src="fig-wkb-geoarrow/img-wkb.png" />
+
+---
+
+class: theme-light-minimal
+
+<img style="position: absolute; top: 65px; margin-left: auto; margin-right: auto; left: 0; right: 0; width: 60%;" src="fig-wkb-geoarrow/img-geoarrow.png" />
+
+---
+
+class: theme-green-minimal
+
+## Apache Arrow + Geospatial
+
+Apache Parquet = file format
+
+Apache Arrow = memory format (+ ...)
+
+--
+count: false
+
+➔
+
+GeoParquet -> how do we use Parquet to store geospatial data
+
+GeoArrow -> how do we represent geospatial data in Arrow memory
+
+---
+layout: false
+class: theme-green-minimal
+
+## What is GeoParquet?
+
+Goal:
+
+> *Standardize how geospatial data is represented in Parquet to further
+geospatial interoperability among tools using Parquet today, and hopefully
+help push forward what's possible with 'cloud-native geospatial' workflows.*
+
+--
+count: false
+
+➔ Specification how to store geospatial vector data in Parquet files
+
+--
+count: false
+
+* Which data type to use (currently WKB as variable-size binary (BYTE_ARRAY))
+
+--
+count: false
+
+* Metadata (encoding, coordinate reference system, geometry types, planar vs spherical edges, ...)
+
+---
+
+class: theme-green-minimal
+
+## GeoArrow: an Arrow-native storage format for vector geometries
+
+- Arrow defines a rich set of types to encode arrays of pretty much anything...integers, doubles, strings, dates, times, nested lists, and more.
+- It doesn't define an encoding for geometry!
+- The GeoArrow specification is an attempt to formalize the encoding of geometry in an Arrow Array.
+- Efficient format for direct computation
+
+.center[
+https://github.com/geopandas/geo-arrow-spec
+]
+
+---
+
+class: theme-green-minimal
+
+## GeoArrow: Point
+
+POINT (0 0), POINT (2 0), POINT (0 1), POINT(0 0)
+
+`Coordinates <double[8]>:    0   0   2   0   0   1   0   0`
+
+`FixedSizeList<xy: double[2]>`
+
+---
+
+class: theme-green-minimal
+
+## GeoArrow: Linestring
+
+LINESTRING (0 0, 2 0, 0 1, 0 0)
+
+`Coordinates <double[8]>:    0   0   2   0   0   1   0   0`
+
+`Vertex offsets <int32[2]>: 0   4`
+
+`List<vertices: FixedSizeList<xy: double[2]>>`
+
+---
+
+class: theme-green-minimal
+
+## GeoArrow: Polygon
+
+POLYGON ((0 0, 2 0, 0 1, 0 0))
+
+`Coordinates <double[8]>:    0   0   2   0   0   1   0   0`
+
+`Vertex offsets <int32[2]>: 0   4`
+
+`Ring offsets <int32[2]>:   0   1`
+
+`List<rings: List<vertices: FixedSizeList<xy: double[2]>>>`
+
+???
+
+It's fast to iterate over geometry arranged in buffers designed for random access!
+
+
+Geospatial functions in Acero will enable unlock smooth and performant workflows for all types of geospatial data
+
+???
+
+## Adoption and Applications
+
+(logos for projects that already are using Parquet/Arrow/Geo in some form)
+
+Listing some of the existing examples:
+
+- GeoMesa
+- Kyle’s JavaScript post
+- cuSpatial GPU support
+- Microsoft thinger
+
+And other places it can be useful
+
+---
+
+class: theme-green-maximal
+
+## What next?
+
+.pull-left[
+- Ongoing specification development
+- Continued support for GeoParquet
+- Continued support for GeoArrow
+]
+
+.pull-right[
+<ol class="fa-ul">
+  <li><span class="fa-li"><i class="fa fa-twitter"></i></span>twitter.com/jorisvdbossche</li>
+  <li><span class="fa-li"><i class="fa fa-twitter"></i></span>twitter.com/paleolimbot</li>
+  <li><span class="fa-li"><i class="fa fa-github"></i></span>github.com/geopandas/geo-arrow-spec</li>
+  <li><span class="fa-li"><i class="fa fa-github"></i></span>opengeospatial/geoparquet</li>
+</ol>
+]
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="libs/macros.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "solarized-dark",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9",
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc((%current% - 1) / (%total% - 1)* 100%);\">\n  </div>\n</div>\n"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

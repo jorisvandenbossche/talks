@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="48cm" height="23cm" viewBox="40 40 960 460" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs/>
+  <g id="Background">
+    <rect style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2.35099e-37; stroke: #ffffff" x="40" y="40" width="960" height="460" rx="0" ry="0"/>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="100" y="100" width="160" height="100" rx="0" ry="0"/>
+    <text font-size="15.2849" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="180" y="155.291">
+      <tspan x="180" y="155.291">GeoPackage</tspan>
+    </text>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="100" y="220" width="160" height="100" rx="0" ry="0"/>
+    <text font-size="15.2849" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="180" y="275.291">
+      <tspan x="180" y="275.291">Shapefile</tspan>
+    </text>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="100" y="340" width="160" height="100" rx="0" ry="0"/>
+    <text font-size="15.2849" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="180" y="395.291">
+      <tspan x="180" y="395.291">FlatGeoBuf</tspan>
+    </text>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="360" y="220" width="160" height="100" rx="0" ry="0"/>
+    <g>
+      <path style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" d="M 260 150 C 306.48,150 312.554,270 359.034,270"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 260 150 C 260,149 261,148 262,148 C 263,148 264,149 264,150 C 264,151 263,152 262,152 C 261,152 260,151 260,150z"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 359.034 270 C 359.034,271 358.034,272 357.034,272 C 356.034,272 355.034,271 355.034,270 C 355.034,269 356.034,268 357.034,268 C 358.034,268 359.034,269 359.034,270z"/>
+    </g>
+    <g>
+      <path style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" d="M 261.001 390 C 307.481,390 312.519,270 358.999,270"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 261.001 390 C 261.001,389 262.001,388 263.001,388 C 264.001,388 265.001,389 265.001,390 C 265.001,391 264.001,392 263.001,392 C 262.001,392 261.001,391 261.001,390z"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 358.999 270 C 358.999,271 357.999,272 356.999,272 C 355.999,272 354.999,271 354.999,270 C 354.999,269 355.999,268 356.999,268 C 357.999,268 358.999,269 358.999,270z"/>
+    </g>
+    <g>
+      <path style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" d="M 261.004 270 C 307.484,270 312.516,270 358.996,270"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 261.004 270 C 261.004,269 262.004,268 263.004,268 C 264.004,268 265.004,269 265.004,270 C 265.004,271 264.004,272 263.004,272 C 262.004,272 261.004,271 261.004,270z"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 358.996 270 C 358.996,271 357.996,272 356.996,272 C 355.996,272 354.996,271 354.996,270 C 354.996,269 355.996,268 356.996,268 C 357.996,268 358.996,269 358.996,270z"/>
+    </g>
+    <text font-size="12.7998" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="180" y="380">
+      <tspan x="180" y="380"></tspan>
+    </text>
+    <text font-size="22.5774" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="440" y="277.816">
+      <tspan x="440" y="277.816">GDAL</tspan>
+    </text>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="780" y="140" width="160" height="100" rx="0" ry="0"/>
+    <text font-size="22.5774" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="860" y="197.816">
+      <tspan x="860" y="197.816">Python</tspan>
+    </text>
+    <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="780" y="300" width="160" height="100" rx="0" ry="0"/>
+    <text font-size="22.5774" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="860" y="357.488">
+      <tspan x="860" y="357.488">R</tspan>
+    </text>
+    <text font-size="12.7998" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="880" y="360">
+      <tspan x="880" y="360"></tspan>
+    </text>
+    <g>
+      <path style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" d="M 520.583 270 C 567.063,270 732.937,190 779.417,190"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 520.583 270 C 520.583,269 521.583,268 522.583,268 C 523.583,268 524.583,269 524.583,270 C 524.583,271 523.583,272 522.583,272 C 521.583,272 520.583,271 520.583,270z"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 779.417 190 C 779.417,191 778.417,192 777.417,192 C 776.417,192 775.417,191 775.417,190 C 775.417,189 776.417,188 777.417,188 C 778.417,188 779.417,189 779.417,190z"/>
+    </g>
+    <g>
+      <path style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" d="M 520.583 270 C 567.063,270 732.937,350 779.417,350"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 520.583 270 C 520.583,269 521.583,268 522.583,268 C 523.583,268 524.583,269 524.583,270 C 524.583,271 523.583,272 522.583,272 C 521.583,272 520.583,271 520.583,270z"/>
+      <path style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #ffffff" fill-rule="evenodd" d="M 779.417 350 C 779.417,351 778.417,352 777.417,352 C 776.417,352 775.417,351 775.417,350 C 775.417,349 776.417,348 777.417,348 C 778.417,348 779.417,349 779.417,350z"/>
+    </g>
+    <text font-size="12.7998" style="fill: #ffffff; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="520" y="270">
+      <tspan x="520" y="270"></tspan>
+    </text>
+    <g>
+      <rect style="fill: #000000; fill-opacity: 1; stroke: none" x="565.925" y="239.065" width="188.15" height="62.0445"/>
+      <text font-size="16.9331" style="fill: #ffffff; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="660" y="254.782">
+        <tspan x="660" y="254.782">GetNextFeature()</tspan>
+        <tspan x="660" y="275.949">(record-wise transport</tspan>
+        <tspan x="660" y="297.116">to Python or R)</tspan>
+      </text>
+    </g>
+    <text font-size="12.7998" style="fill: #ffffff; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="524" y="636">
+      <tspan x="524" y="636"></tspan>
+    </text>
+  </g>
+  <g id="Background"/>
+</svg>
