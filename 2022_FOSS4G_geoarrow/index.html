@@ -107,7 +107,7 @@ class: theme-green-minimal
 </div>
 
 ---
-class: theme-green-maximal
+class: theme-green-minimal
 
 
 ## What is Apache Arrow?
@@ -117,6 +117,10 @@ class: theme-green-maximal
 > \+  <br>
 > A multi-language toolbox for accelerated data interchange <br> 
 > and in-memory processing
+
+.abs-layout.bottom-1.left-70.width-40[
+  ![:scale 60%](img/arrow-logo_hex_white-txt_black-bg.png)
+]
 
 
 <!-- ## What is Apache Arrow? -->
@@ -217,14 +221,17 @@ class: theme-green-minimal
 
 ## Data Interchange
 
-![:scale 80%](img/gdal-data-transport-1.svg)
+![:scale 75%](img/gdal-data-transport-1.svg)
 
 ---
 class: theme-green-minimal
 
 ## Data Interchange with Apache Arrow
 
-![:scale 80%](img/gdal-data-transport-2.svg)
+![:scale 75%](img/gdal-data-transport-2.svg)
+
+<div style="margin-bottom: -20px;"></div>
+
 
 [RFC 86: Column-oriented read API for vector layers](https://github.com/OSGeo/gdal/pull/5830) by Even Rouault (coming to GDAL 3.6)
 
@@ -271,18 +278,9 @@ Goal:
 geospatial interoperability among tools using Parquet today, and hopefully
 help push forward what's possible with 'cloud-native geospatial' workflows.*
 
---
-count: false
-
 ➔ Specification how to store geospatial vector data in Parquet files
 
---
-count: false
-
 * Which data type to use (currently WKB as variable-size binary (BYTE_ARRAY))
-
---
-count: false
 
 * Metadata (encoding, coordinate reference system, geometry types, planar vs spherical edges, ...)
 
@@ -302,8 +300,32 @@ https://github.com/geopandas/geo-arrow-spec
 ]
 
 ---
-
 class: theme-green-minimal
+
+# GeoArrow
+
+GeoJSON "logical" representation:
+```
+{
+  "type": "Polygon", 
+  "coordinates": [
+      [[35.0, 10.0], [45.0, 45.0], [15.0, 40.0], [10.0, 20.0], [35.0, 10.0]], 
+      [[20.0, 30.0], [35.0, 35.0], [30.0, 20.0], [20.0, 30.0]]
+  ]
+}
+```
+
+GeoArrow physical representation for a "nested list":
+
+```
+coordinates array: [35.0, 10.0, 45.0, 45.0, 15.0, 40.0, 10.0, 20.0, 35.0, 10.0, 20.0,
+                    30.0, 35.0, 35.0, 30.0, 20.0, 20.0, 30.0, ...]
+ring offsets array: [0, 5, 9, ...]
+polygon offsets array: [0, 2, ...]
+```
+
+
+<!-- class: theme-green-minimal
 
 ## GeoArrow: Point
 
@@ -311,10 +333,8 @@ POINT (0 0), POINT (2 0), POINT (0 1), POINT(0 0)
 
 `Coordinates <double[8]>:    0   0   2   0   0   1   0   0`
 
-`FixedSizeList<xy: double[2]>`
-
----
-
+`FixedSizeList<xy: double[2]>` -->
+<!-- 
 class: theme-green-minimal
 
 ## GeoArrow: Linestring
@@ -325,9 +345,9 @@ LINESTRING (0 0, 2 0, 0 1, 0 0)
 
 `Vertex offsets <int32[2]>: 0   4`
 
-`List<vertices: FixedSizeList<xy: double[2]>>`
+`List<vertices: FixedSizeList<xy: double[2]>>` -->
 
----
+<!-- 
 
 class: theme-green-minimal
 
@@ -341,10 +361,10 @@ POLYGON ((0 0, 2 0, 0 1, 0 0))
 
 `Ring offsets <int32[2]>:   0   1`
 
-`List<rings: List<vertices: FixedSizeList<xy: double[2]>>>`
+`List<rings: List<vertices: FixedSizeList<xy: double[2]>>>` -->
+
 
 ???
-
 It's fast to iterate over geometry arranged in buffers designed for random access!
 
 
@@ -364,6 +384,21 @@ Listing some of the existing examples:
 - Microsoft thinger
 
 And other places it can be useful
+
+
+---
+
+class: theme-green-minimal
+
+## Want to know more?
+
+Long version of this presentation at The Data Thread: https://www.youtube.com/watch?v=PbO5FVcPUIQ
+
+Blogposts:
+
+* Building Bridges: Arrow, Parquet, and Geospatial Computing - Dewey Dunnington: https://dewey.dunnington.ca/post/2022/building-bridges-arrow-parquet-and-geospatial-computing/
+* GeoArrow and GeoParquet in deck.gl - Kyle Barron: https://observablehq.com/@kylebarron/geoarrow-and-geoparquet-in-deck-gl
+
 
 ---
 
