@@ -1,0 +1,208 @@
+/* Custom fonts */
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,900&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Gochi+Hand|Handlee&display=swap');
+
+/* primary and secondary defined by xaringan-themer */
+
+/* Title slide customization */
+.title-slide h1, h2 {
+  text-align: left;
+  font-weight: bold;
+}
+
+.title-slide h1 {
+  font-weight: bold;
+  font-family: Raleway;
+}
+
+.inverse h2 {
+  font-weight: normal;
+}
+
+.title-slide h2 {
+  font-weight: normal;
+}
+
+.title-slide h3 {
+  text-align: right;
+}
+
+
+/* Alignment */
+.right{
+  text-align: right;
+}
+
+/* Margins around headers */
+
+h1, h2, h3 {
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-right: 5px;
+  margin-left: 5px;
+}
+
+/* Font colors */
+
+.plainwhite {
+  color: #FFFFFF;
+}
+
+.primary{
+  color: var(--primary);
+}
+
+.secondary{
+  color: var(--secondary);
+}
+
+/* Bold */
+.embolden{
+  font-weight: bold;
+}
+
+
+/* Font sizes */
+.larger { font-size: 400% }
+.large { font-size: 130% }
+.midi { font-size: 85% }
+.small { font-size: 70% }
+.xsmall { font-size: 60% }
+.tiny { font-size: 50% }
+
+/* Custom fonts */
+
+.huge-primary {
+ font-family: 'Montserrat', sans-serif;
+ font-size: 1500%;
+ font-weight: bold;
+ color: var(--primary);
+}
+
+.huge-secondary {
+ font-family: 'Montserrat', sans-serif;
+ font-size: 1500%;
+ font-weight: bold;
+ color: var(--secondary);
+}
+
+/* Handwriting */
+.hand{
+  font-family: 'Gochi Hand', cursive;
+  font-size: 125%;
+}
+.hand-primary{
+  font-family: 'Gochi Hand', cursive;
+  color: var(--primary);
+  font-size: 125%;
+}
+.hand-secondary{
+  font-family: 'Gochi Hand', cursive;
+  color: var(--secondary);
+  font-size: 125%;
+}
+
+
+/*Alternative two-column layouts*/
+
+  /*Left 70% - Right 30% */
+.pull-left-wide {
+  width: 70%;
+  float: left;
+}
+.pull-right-narrow {
+  width: 27%;
+  float: right;
+}
+.pull-right-narrow ~ * {
+  clear: both;
+}
+
+  /*Left 30% - Right 70% */
+.pull-left-narrow {
+  width: 30%;
+  float: left;
+}
+.pull-right-wide {
+  width: 67%;
+  float: right;
+}
+.pull-right-wide ~ * {
+  clear: both;
+}
+
+
+/* Four column layout */
+.four-column {
+  float: left;
+  width: 25%;
+  text-align: center;
+}
+
+/* Three column layout */
+.three-column {
+  float: left;
+  width: 33%;
+  text-align: center;
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+
+/* Progress bar */
+/* https://github.com/yihui/xaringan/wiki/Progressbar */
+.remark-slide-number {
+  position: inherit;
+}
+
+.remark-slide-number .progress-bar-container {
+  position: absolute;
+  top: 0;
+  height: 4px;
+  display: block;
+  left: 0;
+  right: 0;
+}
+
+.remark-slide-number .progress-bar {
+  height: 100%;
+  background-color: "black";
+}
+
+/* Square bullets for lists */
+
+ul{
+  list-style-type: square;
+}
+
+/* Footer */
+div.my-footer {
+    position: absolute;
+    bottom: 0px;
+    height: 35px;
+    width: 90%;
+}
+div.my-footer span {
+    font-size: 12pt;
+    position: absolute;
+    color: #333333;
+    bottom: 10px;
+}
+div.my-footer a {
+    font-size: 12pt;
+    color: #ffffff;
+}
+
+
+/* Footnote */
+.footnote {
+  position: absolute;
+  bottom: 1em;
+  padding-right: 4em;
+  font-size: 70%;
+}
