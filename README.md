@@ -29,3 +29,5 @@ PyConDE / PyData Berlin 2022 - Pandas copy/view: https://jorisvandenbossche.gith
 GeoPython 2022 geopandas slides: https://jorisvandenbossche.github.io/talks/2022_GeoPython_geopandas/#1
 
 FOSS4G Belgium slides: https://jorisvandenbossche.github.io/talks/2022_FOSS4GBE_geoarrow
+
+PyData Global 2022 - Pandas copy/view: https://jorisvandenbossche.github.io/talks/2022_PyDataGlobal_pandas-copy-view/
