@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Shapely 2.0</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+      <link rel="stylesheet" type="text/css" href="abs-layout.css" />
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Shapely 2.0
+
+## An improved foundation for GeoPandas and the Python geospatial ecosystem
+
+Joris Van den Bossche, GeoPython, March 7, 2023
+
+https://github.com/jorisvandenbossche/talks/
+
+---
+
+# About me
+
+.larger[**Joris Van den Bossche**]
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, Apache Arrow, ...
+- Currently working part-time at Voltron Data on Apache Arrow
+
+<div style="margin-bottom:30px"></div>
+
+.affiliations[
+  ![:scale 30%](img/geopandas_logo.svg)
+  ![:scale 23%](img/apache-arrow.png)
+  ![:scale 40%](img/voltrondata-logo-green.png)
+]
+
+.larger[.center[
+<a href="https://twitter.com/jorisvdbossche"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
+<a href="https://github.com/jorisvandenbossche"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]]
+
+---
+class: center, middle
+
+# Introduction: GEOS
+
+---
+# Vector processing in QGIS
+
+.center[
+![:scale 60%](img/example_QGIS.png)
+]
+
+--
+count: false
+
+.bottom[
+&#x2B95; using the <b>GEOS</b> library under the hood.
+]
+
+---
+# Vector processing in Postgis
+
+Example from https://postgis.net/workshops/postgis-intro/:
+
+```sql
+SELECT
+  subways.name AS subway_name,
+  neighborhoods.name AS neighborhood_name,
+  neighborhoods.boroname AS borough
+FROM nyc_neighborhoods AS neighborhoods
+JOIN nyc_subway_stations AS subways
+ON `ST_Contains`(neighborhoods.geom, subways.geom)
+WHERE subways.name = 'Broad St';
+```
+
+--
+count: false
+
+.bottom[
+&#x2B95; using the <b>GEOS</b> library under the hood.
+]
+
+---
+# Vector processing in R (sf)
+
+Example from FOSS4G Belgium presentation by Thomas Goossens (https://pokyah.shinyapps.io/foss4GBXL2018):
+```r
+library(sf) 
+
+belgium = sf::st_as_sf(
+    rnaturalearth::ne_states(country = 'belgium'))
+wallonia = belgium %>% dplyr::filter(region == "Walloon")
+grid = `sf::st_intersection`(
+    grid, sf::st_transform(wallonia, crs = 3812))
+```
+
+--
+count: false
+
+.bottom[
+&#x2B95; using the <b>GEOS</b> library under the hood.
+]
+
+---
+# Vector processing in Python
+
+Using Shapely and GeoPandas:
+
+```python
+import geopandas
+import shapely.geometry
+
+districts = geopandas.read_file("paris_districts.gpkg")
+notre_dame = shapely.geometry.Point(452321, 5411311)
+
+# filter districts that contain the point
+districts[districts.`contains`(notre_dame)]
+```
+
+--
+count: false
+
+.bottom[
+&#x2B95; using the <b>GEOS</b> library under the hood.
+]
+
+---
+
+# GEOS
+
+<img style="position: absolute; top: 20px; right: 20px; width:40%" src="img/geos-social-black.png">
+
+## Geometry Engine Open Source
+
+* C/C++ port of a subset of Java Topology Suite (JTS)
+* Most widely used geospatial C++ computational geometry library
+* Implements geometry objects (simple features), spatial predicate functions and spatial
+  operations, prepared geometries, STR tree spatial index, WKT/WKB encoding and decoding
+
+Used under the hood by many applications (GDAL, QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
+
+[https://libgeos.org/](https://libgeos.org/)
+
+???
+
+JTS itself also used in GeoServer, GeoTools, ...
+
+---
+# Simple features
+
+
+Simple feature access - OGC / ISO standard:
+
+![:scale 100%](img/simple_features_3_text.svg)
+
+---
+# Spatial predicates
+
+https://en.wikipedia.org/wiki/DE-9IM
+
+.center[
+![:scale 60%](img/TopologicSpatialRelarions2.png)
+]
+
+---
+# Spatial operations
+
+<table><tr>
+  <td> <img style="width:80%" src="img/spatial-operations-base.png"/> </td>
+  <td> <img style="width:80%" src="img/spatial-operations-intersection.png"/> </td>
+  </tr>
+  <tr>
+  <td> <img style="width:80%" src="img/spatial-operations-union.png"/> </td>
+  <td> <img style="width:80%" src="img/spatial-operations-difference.png"/> </td>
+</tr></table>
+
+---
+# Spatial operations
+
+<table><tr>
+  <td> <img style="width:80%" src="img/spatial-operations-buffer-point1.png"/> </td>
+  <td> <img style="width:80%" src="img/spatial-operations-buffer-point2.png"/> </td>
+  </tr>
+  <tr>
+  <td> <img style="width:80%" src="img/spatial-operations-buffer-line.png"/> </td>
+  <td> <img style="width:80%" src="img/spatial-operations-buffer-polygon.png"/> </td>
+</tr></table>
+
+---
+
+# GEOS
+
+<img style="position: absolute; top: 20px; right: 20px; width:40%" src="img/geos-social-black.png">
+
+## Geometry Engine Open Source
+
+* C/C++ port of a subset of Java Topology Suite (JTS)
+* Most widely used geospatial C++ computational geometry library
+* Implements geometry objects (simple features), spatial predicate functions and spatial
+  operations, prepared geometries, STR tree spatial index, WKT/WKB encoding and decoding
+
+Used under the hood by many applications (GDAL, QGIS, PostGIS, MapServer, GRASS, GeoDjango, ...)
+
+[https://libgeos.org/](https://libgeos.org/)
+
+
+---
+class: middle, center
+
+# GEOS in the Python ecosystem
+
+---
+
+# Shapely
+
+Python package for the manipulation and analysis of geometric objects
+
+<div style="margin-bottom:-10px"></div>
+
+Pythonic interface to GEOS
+
+--
+count:false
+
+.mmedium[
+```python
+>>> from shapely.geometry import Point, LineString, Polygon
+
+>>> point = Point(1, 1)
+>>> line = LineString([(0, 0), (1, 2), (2, 2)])
+>>> poly = line.buffer(1)
+```
+]
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100.0" height="100.0" viewBox="-0.12 -0.12 3.24 2.24" preserveAspectRatio="xMinYMin meet"><g transform="matrix(1,0,0,-1,0,2.0)"><polyline fill="none" stroke="#66cc99" stroke-width="0.06480000000000001" points="0.0,0.0 1.0,2.0 3.0,2.0" opacity="0.8" /></g></svg>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100.0" height="100.0" viewBox="-1.199614564286579 -1.1996145642865792 5.399599739836063 4.399599739836063" preserveAspectRatio="xMinYMin meet"><g transform="matrix(1,0,0,-1,0,2.0003706112629045)"><path fill-rule="evenodd" fill="#66cc99" stroke="#555555" stroke-width="0.10799199479672125" opacity="0.6" d="M 0.10557280900008414,2.447213595499958 L 0.155035474356646,2.53482235406189 L 0.2130507437626893,2.6170177210644305 L 0.2790313953728045,2.692967727345159 L 0.35230958293898673,2.7619036183450834 L 0.4321435956500752,2.823127635326852 L 0.5177253656172087,2.8760200779839153 L 0.6081886470156581,2.920045576953979 L 0.7026177840949897,2.9547585127472944 L 0.8000569793090774,2.979807526240225 L 0.8995199677553422,2.994939075079531 L 1.0,3.0 L 3.0,3.0 L 3.098017140329562,2.9951847266721967 L 3.1950903220161297,2.9807852804032304 L 3.290284677254464,2.9569403357322086 L 3.382683432365091,2.923879532511286 L 3.471396736825999,2.8819212643483545 L 3.555570233019603,2.831469612302545 L 3.634393284163646,2.7730104533627364 L 3.707106781186548,2.707106781186547 L 3.7730104533627373,2.634393284163645 L 3.831469612302546,2.5555702330196017 L 3.8819212643483554,2.471396736825997 L 3.923879532511287,2.382683432365089 L 3.956940335732209,2.290284677254462 L 3.9807852804032304,2.195090322016128 L 3.995184726672197,2.0980171403295604 L 4.0,2.0 L 3.995184726672197,1.9019828596704396 L 3.9807852804032304,1.804909677983872 L 3.956940335732209,1.709715322745538 L 3.923879532511287,1.6173165676349106 L 3.8819212643483554,1.528603263174003 L 3.8314696123025453,1.4444297669803983 L 3.7730104533627373,1.3656067158363547 L 3.707106781186548,1.2928932188134525 L 3.6343932841636457,1.2269895466372631 L 3.555570233019602,1.1685303876974547 L 3.4713967368259975,1.118078735651645 L 3.3826834323650896,1.076120467488713 L 3.290284677254462,1.043059664267791 L 3.195090322016128,1.0192147195967696 L 3.09801714032956,1.004815273327803 L 3.0,1.0 L 1.6180339887498947,1.0 L 0.8944271909999159,-0.4472135954999579 L 0.8462856818560246,-0.5327293352965308 L 0.7899939789690481,-0.6131146003747189 L 0.7260942022099621,-0.6875952366887649 L 0.6552017413601281,-0.7554539549957071 L 0.5779993295712907,-0.816037238742901 L 0.4952304682721081,-0.8687616377896693 L 0.4076922668429532,-0.9131193873511033 L 0.3162277660168373,-0.948683298050514 L 0.22171781893629816,-0.9751108699866549 L 0.12507260805611378,-0.9921475911950004 L 0.02722287958870663,-0.9996293887370953 L -0.0708890200906795,-0.9974842088126424 L -0.16831821975471215,-0.985732710676989 L -0.26412642295040845,-0.9644880676812035 L -0.3573909443069025,-0.9339548773508389 L -0.4472135954999579,-0.8944271909999159 L -0.5327293352965292,-0.8462856818560256 L -0.6131146003747172,-0.7899939789690493 L -0.6875952366887635,-0.7260942022099635 L -0.755453954995706,-0.6552017413601293 L -0.8160372387428999,-0.5779993295712923 L -0.8687616377896683,-0.49523046827210987 L -0.9131193873511024,-0.40769226684295523 L -0.9486832980505132,-0.31622776601683966 L -0.9751108699866542,-0.22171781893630083 L -0.9921475911950001,-0.1250726080561167 L -0.9996293887370952,-0.0272228795887098 L -0.9974842088126427,0.07088902009067612 L -0.9857327106769895,0.1683182197547086 L -0.9644880676812047,0.2641264229504048 L -0.9339548773508404,0.35739094430689866 L -0.8944271909999179,0.4472135954999539 L 0.10557280900008414,2.447213595499958 z" /></g></svg>
+<div style="margin-bottom:-45px"></div>
+.mmedium[
+```python
+>>> poly.contains(point)
+True
+```
+]
+
+--
+count: false
+
+Nice interface to GEOS, but: single objects, no attributes
+
+---
+
+# GeoPandas
+
+Make working with tabular geospatial data in python easier by combining Shapely and pandas
+
+* Extends the pandas data analysis library to work with geographic objects and spatial operations
+* Combines the power of whole ecosystem of (geo) tools (pandas, geos, shapely, gdal, fiona, pyproj, rtree, ...)
+* Bridge between geospatial packages and the scientific / data science stack
+
+Documentation: http://geopandas.readthedocs.io/
+
+.center[
+![:scale 60%](img/geopandas_logo.svg)
+]
+
+???
+
+What Postgis is for databases/postgresql, GeoPandas is for Python/pandas
+
+
+make working with geospatial data like working with any other kind of data in python
+(data stack, numpy, pandas and other tools around those)
+analysis for which you otherwise would need desktop GIS applications (QGIS, ArcGIS) or geospatial databases (PostGIS)
+
+makes pandas objects geometry aware
+
+GeoPandas gives a very nice interface (although I am biased of course),
+but performance wise there is certainly room for improvement.
+
+---
+
+# GeoPandas builds upon Shapely
+
+- GeoPandas stores custom Python (Shapely) objects in arrays
+- For operations, it iterates through those objects
+- The Shapely objects each call the GEOS C operation
+
+<div style="margin-bottom:45px"></div>
+
+.center[
+![:scale 60%](img/geopandas-shapely-1.svg)
+]
+
+---
+
+# GeoPandas builds upon Shapely
+
+- GeoPandas stores custom Python (Shapely) objects in arrays
+- For operations, it iterates through those objects
+- The Shapely objects each call the GEOS C operation
+
+<div style="margin-bottom:45px"></div>
+
+Before Shapely 2.0:
+
+```python
+class GeoSeries:
+    ...
+
+    def distance(self, other):
+*       result = [geom.distance(other) for geom in self.geometry]
+        return pd.Series(result)
+```
+
+---
+
+# The (long) road to Shapely 2.0
+
+- My personal motivation: improving GeoPandas' performance
+- 2017: experimented with cython in GeoPandas
+- 2019: Casper Van der Wel started PyGEOS
+- 2020: Proposal to integrate PyGEOS into Shapely
+- 2021: Internals of Shapely refactored and PyGEOS code merged
+- 2022: Shapely 2.0.0 released!
+
+
+---
+class: middle, center
+
+# Shapely 2.0
+
+---
+
+# Shapely 2.0
+
+Code of PyGEOS has been fully integrated into Shapely (including array-based API).
+
+Highlights:
+
+- Refactor of the internals and the Geometry class (C extension type instead of `ctypes`)
+- Fast, vectorized (element-wise) array operations
+- Preserve familiar Shapely interface for single geometries
+- Many new features (better STRtree, fixed precision, ...) and latest GEOS functions
+
+???
+
+Prototyped in PyGEOS, started by  (https://github.com/pygeos/pygeos/). <br> 
+New way to expose geospatial operations from GEOS into Python:
+
+- array-based + vectorized functions
+- fast
+
+Merged into Shapely to become Shapely 2.0:
+
+* Code of PyGEOS has been fully integrated into Shapely (including array-based API)
+* Internals of Shapely are refactored to use C extension type instead of `ctypes` for the Geometry class
+* Preserve familiar Shapely interface for single geometries
+* Numpy is now a required dependency
+
+---
+
+# Vectorized (element-wise) array functions
+
+Instead of a manual `for` loop:
+
+.larger[
+```python
+[polygon.contains(point) for point in points]
+```
+]
+
+you can do
+
+.larger[
+```python
+shapely.contains(polygon, points)
+```
+]
+
+--
+
+Those functions are numpy ufuncs!
+
+---
+
+# Fast
+
+Benchmark for 1M points: contained in or distance to a polygon
+
+![:scale 35%](img/bench_shapely_contains.png)
+![:scale 35%](img/bench_shapely_distance.png)
+
+Significant performance increase: 80x (contains) to 5x (distance) for this example
+
+---
+
+# Fast
+
+Spatial join of NYC neighborhoods with census blocks (example from https://postgis.net/workshops/postgis-intro/)
+
+```python
+geopandas.sjoin(
+    nyc_neighborhoods, nyc_census_blocks, predicate='intersects'
+)
+```
+
+.center[
+![:scale 30%](img/bench_shapely_sjoin.png)
+]
+
+???
+
+But depends a lot on the exact case (characteristics of the geometries being joined).
+Another artificial case of point-in-polygon with a grid, get 40x speed-up.
+
+---
+
+# Geometries ❤️ numpy arrays
+
+The geometry objects (Point, LineString, Polygon, .. classes) are now **immutable**,
+**hashable** and **non-iterable** objects, making it a *lot* easier to work with numpy arrays of
+geometries.
+
+&#x2B95; this caused some behavioural changes!
+
+See all details in the 1.8 -> 2.0 migration guide at https://shapely.readthedocs.io/en/latest/migration.html
+
+---
+
+# Geometries ❤️ numpy arrays
+
+Multi-part geometries are no longer "sequences" (length, indexable, iterable)
+
+.pull-left[
+Shapely 1.8
+
+```python
+mp = MultiPoint(...)
+
+# get the number of sub points
+len(mp)
+
+# get the first sub point
+mp[0]
+
+# get a list of sub points
+len(mp)
+```
+]
+
+.pull-right[
+Shapely 2.0
+
+```python
+mp = MultiPoint(...)
+
+# get the number of sub points
+len(mp`.geoms`)
+
+# get the first sub point
+mp`.geoms`[0]
+
+# get a list of sub points
+len(mp`.geoms`)
+```
+]
+
+This `.geoms` attribute works in Shapely 1.x as well!
+
+---
+
+# Geometries ❤️ numpy arrays
+
+Single-part geometries (Point, LineString, LinearRing) no longer directly
+convert to a numpy array of coordinates:
+
+.pull-left[
+Shapely 1.8
+
+```python
+>>> line = LineString(
+...     [(0, 0), (1, 1), (2, 2)]
+... )
+>>> np.asarray(line)
+array([[0., 0.],
+       [1., 1.],
+       [2., 2.]])
+```
+]
+
+.pull-right[
+Shapely 2.0
+
+```python
+>>> line = LineString(
+...     [(0, 0), (1, 1), (2, 2)]
+... )
+>>> np.asarray(line`.coords`)
+array([[0., 0.],
+       [1., 1.],
+       [2., 2.]])
+```
+]
+
+This `.coords` attribute works in Shapely 1.x as well!
+
+---
+
+# A peak under the hood
+
+Shapely 1.x used `ctypes` to interact with GEOS from Python
+
+Shapely 2.0 implements a Python "extension type" (a Python class defined in C):
+
+```c
+typedef struct {
+  PyObject_HEAD
+  void* ptr;  // -> pointer to GEOSGeometry
+  ...
+} GeometryObject;
+```
+
+This allows to write the array functions in C as well, accessing the GEOSGeometry
+pointer without Python overhead, using the numpy ufunc C API.
+
+
+---
+
+# Vectorized (element-wise) array functions
+
+Shapely 2.0 allows you to work with arrays of geometries:
+
+.larger[
+```python
+shapely.contains(polygon, points)
+```
+]
+
+and provides such vectorized (element-wise) versions of all spatial functions that:
+
+1. give a considerable performance improvement 
+2. release the GIL, allowing multithreading, e.g. in dask-geopandas
+3. is simply easier than for loops
+
+---
+
+# ... and much more goodies
+
+- Geometry subclasses and `shapely.ops` functions are now available in the top-level namespace
+- More informative repr with truncated WKT
+- Bindings for more GEOS functions
+- STRtree: direct predicate evaluation, query an array of geometries at once, `query_nearest`
+- Support for fixed precision model for geometries and in overlay functions
+- ...
+
+See full release notes at https://shapely.readthedocs.io/en/latest/release/2.x.html#version-2-0-0
+
+???
+
+Further, many new features from the latest GEOS versions are now exposed: fixed
+precision overlay functions, distance within, segmentize, remove repeated points,
+concave hull, ...
+
+---
+
+# Bindings for more GEOS functions
+
+Several (new) functions from GEOS are now exposed in Shapely:
+
+* `hausdorff_distance` and `frechet_distance`
+* `contains_properly`
+* `contains_xy` and `intersects_xy`
+* `dwithin`
+* `segmentize`, `node`, `extract_unique_points`, `build_area`
+* `reverse`
+* `minimum_bounding_circle` and `minimum_bounding_radius`
+* `coverage_union` and `coverage_union_all`
+* `remove_repeated_points` (GEOS >= 3.11)
+* `concave_hull` (GEOS >= 3.11)
+
+---
+
+# Concave Hull
+
+.center[
+![:scale 40%](img/concave-hull.png)
+]
+
+Convex vs concave hull. Image from http://lin-ear-th-inking.blogspot.com/2022/01/concave-hulls-in-jts.html
+
+
+---
+
+# Spatial indexing with the STRtree
+
+Point-in-Polygon example: which of the 500 polygons contain which of the 20,000 points?
+
+```python
+>>> shapely.contains(polygons, points[:, np.newaxis])
+array([[False, False, ..., False, False],
+       [False, False, ...,  True, False],
+       ...,
+       [False, False, ..., False, False],
+       [False, False, ..., False, False]])
+```
+
+&#x2B95; takes ca 250ms
+
+
+```python
+>>> tree = shapely.STRtree(points)
+*>>> tree.query(polygons, predicate="contains")
+array([[   1,    1,    1, ...,  484,  484,  484],
+       [8780, 8219,  262, ..., 2224, 5212, 4210]])
+```
+
+&#x2B95; takes ca 1ms
+
+
+---
+
+# Spatial indexing with the STRtree
+
+For each polygon, find all points that are within a certain distance:
+
+```python
+tree = shapely.STRtree(polygons)
+indices = tree.query(points, predicate="dwithin", distance=5_000)
+```
+
+For each polygon, find the closest point (and optionally the distance to the closes point):
+
+```python
+tree = shapely.STRtree(polygons)
+indices, distances = tree.query_nearest(points, return_distance=True)
+```
+
+--
+
+<hr>
+
+Those spatial index methods are used under the hood in GeoPandas `sjoin` and `sjoin_nearest`.
+
+---
+
+## Precision reduction and fixed-precision overlay
+
+Precision reduction producing in valid geometries using `shapely.set_precision`:
+
+.center[
+![](img/eu_precision_reduce.gif)
+]
+
+A new `grid_size` keyword in `shapely.intersection` et al: resulting overlay geometry computed on the same grid.
+
+Image from http://lin-ear-th-inking.blogspot.com/2020/05/jts-overlay-next-generation.html
+
+---
+
+# You were already using PyGEOS?
+
+Migrating to Shapely 2.0 is easy!
+
+Change your `pygeos` import with `shapely` (only a few keyword names and the STRtree API changed)
+
+https://shapely.readthedocs.io/en/stable/migration_pygeos.html
+
+
+<!-- ---
+
+# Contributions welcome!
+
+### Feedback, bug reports, feature requests
+
+### Extend functionality
+
+### Contribute code: https://github.com/geopandas/geopandas -->
+
+---
+class: middle
+
+
+# Thanks for listening! Questions?
+
+### Thanks to Casper van der Wel and Brendan Ward for PyGEOS<br>Thanks to Sean Gillies and Mike Taves and the other Shapely contributors
+
+### Want to help out? There is a sprint tomorrow!
+
+### Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+- [jorisvandenbossche.github.io/talks/2023_GeoPython_Shapely-2.0](
+    http://jorisvandenbossche.github.io/talks/2023_GeoPython_Shapely-2.0)
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: "16:9",
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>
