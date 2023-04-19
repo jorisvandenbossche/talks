@@ -1,0 +1,92 @@
+```{r setup, include=FALSE}
+# (this .Rmd file is automatically included at the beginning of the slides)
+
+# R options
+options(htmltools.dir.version = FALSE)
+
+# figure height, width, dpi
+knitr::opts_chunk$set(echo = TRUE, fig.width = 5, fig.height = 3, dpi = 300)
+
+# fontawesome
+htmltools::tagList(rmarkdown::html_dependency_font_awesome())
+
+# magick
+dev.off <- function(){
+  invisible(grDevices::dev.off())
+}
+
+# hook source
+hook_source <- knitr::knit_hooks$get('source')
+knitr::knit_hooks$set(source = function(x, options) {
+  x <- stringr::str_replace(x, "^[[:blank:]]?([^*].+?)[[:blank:]]*#<<[[:blank:]]*$", "*\\1")
+  hook_source(x, options)
+})
+
+# ensure rmarkdown prints ggplot objects with transparent backgrounds
+knitr::opts_chunk$set(dev.args=list(bg="#00000000"))
+
+# these are the colours used throughout the theme: it's handy to
+# have them accessible from within the R markdown document!
+shades <- list(
+  primary_green = "#005050",
+  accent_green = "#8cffaf",
+  text_white = "#ffffff",
+  text_black = "#000000",
+  accent_dark = "#4f4f4f",
+  accent_light = "#b0b0b0",
+  bg_dark = "#090909",
+  bg_light = "#f6f6f6",
+  contrast_light = "#f97b64",
+  contrast_dark = "#b92307"
+)
+
+# the voltron light ggplot2 theme complements the green and dark slide themes
+theme_voltron_light <- function(...) {
+  theme_bw() %+replace%
+  theme(
+    plot.background = element_rect(
+      colour = "transparent", 
+      fill = "transparent"
+    ),
+    text = element_text(
+      colour = shades$text_white
+    ), 
+    axis.text = element_text(
+      colour = shades$text_white
+    )
+  )
+}
+
+# the voltron dark ggplot2 theme complements the light slide theme
+theme_voltron_dark <- function(...) {
+  theme_dark() %+replace%
+  theme(
+    plot.background = element_rect(
+      colour = "transparent", 
+      fill = "transparent"
+    ),
+    text = element_text(
+      colour = shades$text_black
+    ), 
+    axis.text = element_text(
+      colour = shades$text_black
+    )
+  )
+}
+
+# set seed
+set.seed(1234)
+```
+
+layout: true
+
+<div class="my-footer">
+<span>
+  <!-- 
+  You could put a footer link in here, which I used to do for a lot of my
+  other slide decks, but it probably doesn't work well with this theme
+  -->
+</span>
+</div> 
+
+---

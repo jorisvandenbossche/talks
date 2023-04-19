@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem</title>
+    <meta charset="utf-8" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <meta name="github-repo" content="djnavarro/xaringan-template-voltrondata"/>
+    <meta name="twitter:title" content="Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem"/>
+    <meta name="twitter:description" content="Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem"/>
+    <meta name="twitter:url" content="https://github.com/geoarrow/geoarrow"/>
+    <meta name="twitter:image" content="https://github.com/jorisvandenbossche/talks/raw/master/2022_FOSS4G_geoarrow/fig-geoarrow-hex/geoarrow-hex.png"/>
+    <meta name="twitter:image:alt" content="Image showing the title slide. The title in white reads &#39;Voltron Data template for xaringan users&#39;, with &#39;by Danielle Navarro&#39; immediately underneath. The background is dark green, with the Voltron Data &#39;data lake&#39; image shown in light green below the title, and the company logo shown in light green in the top right corner"/>
+    <meta name="twitter:card" content="summary"/>
+    <meta property="og:title" content="Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem"/>
+    <meta property="og:description" content="Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem"/>
+    <meta property="og:url" content="https://github.com/geoarrow/geoarrow"/>
+    <meta property="og:image" content="https://github.com/jorisvandenbossche/talks/raw/master/2022_FOSS4G_geoarrow/fig-geoarrow-hex/geoarrow-hex.png"/>
+    <meta property="og:image:alt" content="Image showing the title slide. The title in white reads &#39;Voltron Data template for xaringan users&#39;, with &#39;by Danielle Navarro&#39; immediately underneath. The background is dark green, with the Voltron Data &#39;data lake&#39; image shown in light green below the title, and the company logo shown in light green in the top right corner"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:locale" content="en_US"/>
+    <meta property="article:author" content="Joris Van den Bossche and Dewey Dunnington"/>
+    <link rel="stylesheet" href="style/xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="style/voltron-data-style.css" type="text/css" />
+    <link rel="stylesheet" href="style/abs-layout.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+class: center, middle, theme-green  <!-- title slide style -->
+
+# Apache Arrow: connecting and accelerating dataframe libraries across the PyData ecosystem</title>
+
+.boldface[Joris Van den Bossche (Voltron Data)] <!-- author, one line -->
+.center[.midi[PyCon DE / PyData Berlin, 19 April 2023]] <!-- general info, one line -->
+<div style="margin-bottom: 40px;"></div>
+.center[https://jorisvandenbossche.github.io/talks/]
+
+<!--
+font-size classes (relative to normal 100%)
+
+.larger = 200% 
+.large  = 130% 
+.midi   = 85% 
+.small  = 70% 
+.xsmall = 60% 
+.tiny   = 50% 
+-->
+
+---
+
+## About me
+
+**Joris Van den Bossche**
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, Apache Arrow, ...
+- Currently working part-time at Voltron Data on Apache Arrow
+
+<div style="margin-bottom:30px; clear: both"></div>
+
+.center[
+.affiliations[
+  ![:scale 30%](img/pandas.svg)
+  ![:scale 35%](img/apache-arrow.png)
+]
+]
+
+.center[
+<a href="https://twitter.com/jorisvdbossche" style="color: var(--primary)"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
+<a href="https://github.com/jorisvandenbossche" style="color: var(--primary)"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]
+
+.abs-layout.top-1.left-50[
+  ![:scale 80%](img/voltrondata-logo-green.png)
+]
+
+---
+class: theme-green-minimal
+
+
+## What is Apache Arrow?
+
+> A specification defining a common, language-agnostic <br>
+> in-memory representation for columnar data <br>
+> \+  <br>
+> A multi-language toolbox for accelerated data interchange <br> 
+> and in-memory processing
+
+.abs-layout.bottom-1.left-70.width-40[
+  ![:scale 60%](img/arrow-logo_hex_white-txt_black-bg.png)
+]
+
+
+<!-- ## What is Apache Arrow? -->
+
+<!-- - Toolbox for in-memory analytics -->
+<!-- - Toolbox for larger than memory data -->
+<!-- - Toolbox for connecting languages and hardware -->
+<!-- - Efficient, performant, open source -->
+<!-- - Details at [arrow.apache.org](https://arrow.apache.org) -->
+
+
+<!---------------------------------------------------------------------------->
+---
+
+class: theme-green-minimal
+
+## Accelerating data interchange
+
+<p style="margin-bottom: 20px;"><img src="img/data-interchange-1.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+
+<!----------------------------- SLIDE BREAK ----------------------------->
+---
+
+class: theme-green-minimal
+
+## Accelerating data interchange
+
+
+<p style="margin-bottom: 20px;"><img src="img/data-interchange-2.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+
+<!----------------------------- SLIDE BREAK ----------------------------->
+---
+
+class: theme-green-minimal
+
+## Efficient in-memory processing
+
+<p style="margin-bottom: 20px;"><img src="img/simd-1.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+---
+
+class: theme-green-minimal
+
+## Efficient in-memory processing
+
+<p style="margin-bottom: 20px;"><img src="img/simd-2.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+---
+
+class: theme-green-minimal
+
+## Efficient in-memory processing
+
+<p style="margin-bottom: 20px;"><img src="img/simd-3.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+---
+
+class: theme-green-minimal
+
+## Efficient in-memory processing
+
+<p style="margin-bottom: 20px;"><img src="img/simd-4.svg" width="70%"></p>
+<p style="margin-top: 20px;"><span class="small">Image by Danielle Navarro</span></p>
+
+---
+class: theme-green-minimal
+
+## The Arrow Columnar Format
+
+* A specification for in-memory representation of columnar data
+* Everything in Arrow is based on the Columnar Format
+* Primitive types:
+  * Integers, floats, booleans, decimals
+  * Binary, utf-8 strings
+  * Dates, times, timestamps, durations, intervals
+* Composite (nested) types:
+  * List, Struct, Map
+  * Union (dense or sparse)
+* Optional dictionary or run-end encoding
+* Nulls encoded as a separate validity bitmap
+* Extension types: an escape hatch for application-specific data (e.g. Pandas extension types, tensor types, ...)
+
+
+---
+class: theme-light-logo
+
+## Arrow has become the de-facto standard
+
+Old figure from the start of the project (vision), now a reality
+
+<div style="margin-bottom:70px;"></div>
+
+.center[
+![:scale 45%](img/copy.png)
+![:scale 45%](img/shared.png)
+]
+
+???
+
+used by all those libraries -> but also for you as user if you have your data in Arrow format, you can easily connect with various systems and you can build a modular pipeline
+
+you can easily use different tools and languages
+
+---
+
+## Ecosystem of specifications and implementations
+
+.center[
+![:scale 80%](img/arrow-overview-diagram.png)
+]
+
+---
+class: theme-light-logo
+
+## Implementations with computational tools
+
+Which can be used from Python:
+
+* Arrow C++ (Acero) - pyarrow
+
+* arrow-rs - datafusion
+
+* arrow2 (polars)
+
+* Ibis: single interface to those different <br>tools (and more)
+
+.abs-layout.top-40.left-60.width-25[
+  ![](img/DataFusion-Logo-Background-White.png)
+]
+
+.abs-layout.top-70.left-60.width-20[
+  ![](img/polars-logo-dark.svg)
+]
+
+
+---
+class: theme-light-logo
+
+## Arrow-compatible compute engines
+
+Systems that do not directly use "Arrow" libraries, but are (very / fully) compatible with Arrow data
+
+.abs-layout.top-40.left-15.width-30[
+  ![](img/rapids_logo.png)
+]
+.abs-layout.top-45.left-55.width-30[
+  ![](img/DuckDB_Logo.svg)
+]
+.abs-layout.top-65.left-35.width-30[
+  ![](img/velox-logo.svg)
+]
+
+---
+class: theme-light-logo
+
+## Arrow C++ / PyArrow
+
+Package with low-level building blocks used throughout the PyData ecosystem
+
+* Core implementation:
+  * In-memory data objects (+ conversion to/from Python, numpy, pandas)
+  * IO facilities, IPC serialization, Flight RPC bindings
+  * Basic GPU support for CUDA-enabled devices
+* Data access services:
+  * Filesystem implementation (local, S3, GCS, HDFS)
+  * File formats (Parquet, Orc, CSV, ND-JSON)
+  * Dataset interface (partitioned, predicate pushdown)
+* Compute:
+  * Set of built-in compute kernels
+  * Acero streaming execution engine (grouped aggregations, joins, ..)
+  * Substrait integration
+
+---
+class: theme-light-logo
+
+## Arrow powering pandas
+
+* Arrow-backed pandas DataFrames: using PyArrow arrays to store the data of a DataFrame.
+* Using `pyarrow.compute` to optimize pandas operations
+
+See previous "pandas 2.0 and beyond" talk for more details: https://phofl.github.io/pydata-berlin/pydata-berlin-2023/intro.html#1
+
+
+---
+
+## Ecosystem of specifications and implementations
+
+.center[
+![:scale 80%](img/arrow-overview-diagram.png)
+]
+
+
+---
+class: theme-green-minimal, center, middle
+
+# Arrow C Data interface
+
+---
+class: theme-green-minimal
+
+## Example: polars to pyarrow
+
+```python
+>>> import polars as pl
+>>> df = pl.DataFrame({"foo": [1, 2, 3], "bar": ["a", "b", "c"]})
+>>> df 
+┌─────┬─────┐
+│ foo ┆ bar │
+│ --- ┆ --- │
+│ i64 ┆ str │
+╞═════╪═════╡
+│ 1   ┆ a   │
+│ 2   ┆ b   │
+│ 3   ┆ c   │
+└─────┴─────┘
+>>> df`.to_arrow()`
+pyarrow.Table
+foo: int64
+bar: large_string
+----
+foo: [[1,2,3]]
+bar: [["a","b","c"]]
+```
+
+--
+
+.abs-layout.top-60.left-40.width-50[
+.primary[
+* Fast, zero-copy conversion
+* Rust object and C++ object pointing to the same data
+]]
+
+???
+
+zero copy conversion, actually sharing the data (both the Rust object and the C++ object point to the same data in memory)
+That might sound trivial, but this is only possible because of the standardization of the Arrow memory format and C data interface
+
+Because this is done without that those two libraries know about each other (at a low level, the method of course imports pyarrow to create the object, but it does not need to bind against the low level Arrow C++ APIs)
+
+
+---
+class: theme-green-minimal
+
+## Arrow C Data Interface
+
+* Zero-copy data sharing between independent runtimes within the same process (inspired by the Python buffer protocol)
+* Small set of ABI-stable C definitions
+* Allows to integrate with the Arrow *format* without necessarily requiring Arrow *software* (either at compile-time or runtime)
+
+https://arrow.apache.org/docs/dev/format/CDataInterface.html
+
+--
+
+Used by Polars, duckdb, arrow-rs/datafusion, GDAL, xgboost, reticulate and rpy2 (Python<->R), ...
+
+
+---
+class: theme-green-minimal
+
+## Arrow C Data Interface
+
+```c
+struct ArrowArray {
+  // Array data description
+  int64_t length;
+  int64_t null_count;
+  int64_t offset;
+  int64_t n_buffers;
+  int64_t n_children;
+* const void** buffers;
+  struct ArrowArray** children;
+  struct ArrowArray* dictionary;
+
+  // Release callback
+  void (*release)(struct ArrowArray*);
+  // Opaque producer-specific data
+  void* private_data;
+};
+```
+
+\+ definitions for `ArrowSchema` and `ArrowArrayStream`
+
+---
+class: theme-green-minimal
+
+## Example: GDAL Data Interchange
+
+GDAL = widely used library for reading and writing geospatial data formats
+
+![:scale 70%](img/gdal-data-transport-1.svg)
+
+---
+class: theme-green-minimal
+
+## Example: GDAL Data Interchange with Arrow
+
+GDAL = widely used library for reading and writing geospatial data formats
+
+![:scale 70%](img/gdal-data-transport-2.svg)
+
+<div style="margin-bottom: -20px;"></div>
+
+
+[RFC 86: Column-oriented read API for vector layers](https://gdal.org/development/rfc/rfc86_column_oriented_api.html) by Even Rouault
+
+---
+
+class: theme-green-minimal
+
+## Example: GDAL Data Interchange with Arrow
+
+[RFC 86: Column-oriented read API for vector layers](https://gdal.org/development/rfc/rfc86_column_oriented_api.html) by Even Rouault
+
+A proposal to output **Arrow C Data interface** structures from GDAL reduces the code required to read a data source to a few lines:
+
+```cpp
+#include <ogr_api.h>
+#include <ogrsf_frmts.h>
+
+// GDALDataset* poDS = GDALDataset::Open("path/to/file.gpkg");
+
+int read_ogr_stream(GDALDataset* poDS, struct ArrowArrayStream* stream) {
+  OGRLayer* poLayer = poDS->GetLayer(0);
+  OGRLayerH hLayer = OGRLayer::ToHandle(poLayer);
+  return OGR_L_GetArrowStream(hLayer, stream, nullptr);
+}
+```
+
+(It's also 4-10x faster depending on the driver!)
+
+???
+
+(pyogrio -> also rust-based python libraries)
+
+---
+class: theme-green-minimal
+
+## nanoarrow
+
+**Arrow C++** 
+* Produce, convert and transform Arrow arrays (with lots of features)
+* (depending on build options) ~50 MB static libraries
+
+**nanoarrow** (https://github.com/apache/arrow-nanoarrow)
+* Just produce and convert from/to C types
+* Tiny size, fast compilation
+* Copy/paste two files into a project 
+* Helpers for Arrow C Data & Arrow C Stream interfaces 
+
+--
+* Goal: lower the barrier to producing/consuming Arrays in Arrow format
+
+More at https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/
+
+
+---
+class: center, middle
+
+# Arrow Database Connectivity (ADBC)
+
+
+---
+class: theme-light-logo
+
+## Using JDBC / ODBC (or Python DBAPI 2.0)
+
+.center[
+![:scale 50%](img/ADBCFlow1.svg)
+]
+<div style="margin-bottom: -40px;"></div>
+
+.small[
+.pull-left[
+1. The application submits a SQL query via the JDBC/ODBC API.
+2. The query is passed on to the driver.
+3. The driver translates the query to a database-specific protocol and sends it to the database.
+]
+.pull-right[
+<ol start="4">
+  <li>The database executes the query and returns the result set in a database-specific format.</li>
+  <li>The driver translates the result into the format required by the JDBC/ODBC API.</li>
+  <li>The application iterates over the result rows using the JDBC/ODBC API.</li>
+  </ol>
+]
+]
+
+--
+
+.pull-both[
+JDBC/ODBC are everywhere, but have conversion costs (assume row-oriented data)
+]
+
+???
+
+Most Common Interaction with Databases
+
+---
+class: theme-light-logo
+
+## Using ADBC
+
+.center[
+![:scale 50%](img/ADBCFlow2.svg)
+]
+<div style="margin-bottom: -40px;"></div>
+
+.small[
+.pull-left[
+1. The application submits a SQL query via the ADBC API.
+2. The query is passed on to the ADBC driver.
+3. The driver translates the query to a database-specific protocol and sends the query to the database.
+]
+.pull-right[
+<ol start="4">
+  <li>The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data.</li>
+  <li>If needed: the driver translates the result into Arrow data.</li>
+  <li>The application iterates over batches of Arrow data.</li>
+</ol>
+]
+]
+
+???
+
+ADBC is an Arrow-based, vendor-neutral API for interacting with databases.
+Just like JDBC/ODBC, underneath the ADBC API are drivers that translate API for specific databases
+
+A driver for an arrow-native database just passes Arrow data through without conversion
+A driver for a non-Arrow-native database must convert the data to Arrow. This saves the application from having to do that, and the driver can optimize the conversion for its database
+The application deals only with one API, and only works with Arrow data
+
+
+---
+class: theme-light-logo
+
+## Arrow Database Connectivity (ADBC)
+
+A single API for getting Apache Arrow data in and out of different databases.
+
+* Arrow-native (using the C Data Interface)
+* Vendor-agnostic (ADBC drivers can implement the API using any underlying protocol)
+
+--
+
+ADBC defines a common client API that can be implemented by different drivers (example: Flight SQL, Spark, DuckDB, SQLite, PostgreSQL...)
+
+ADBC doesn't intend to replace JDBC or ODBC for general use, just for applications that want bulk columnar data access.
+
+https://arrow.apache.org/adbc/
+
+https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc/
+
+???
+
+A columnar, vendor-neutral, minimal-overhead alternative to JDBC/ODBC for analytical applications
+
+ADBC allows native database connectivity using Arrow columnar data
+
+---
+class: theme-light-logo
+
+## ADBC Python drivers
+
+.large-code[
+```
+pip install adbc_driver_sqlite adbc_driver_postgresql
+```
+]
+
+Provides a DBAPI 2.0 like interface (but using `fetch_arrow_table` instead of `fetchone`/`fetchall`):
+
+```python
+import adbc_driver_postgresql.dbapi
+
+uri = "postgresql://localhost:5432/postgres?user=postgres&password=password"
+with adbc_driver_postgresql.dbapi.connect(uri) as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM customer")
+        table = cur.fetch_arrow_table()
+        # Process the results
+```
+
+--
+
+Currently initial versions of drivers for SQLite, PostgreSQL, Flight SQL
+
+---
+class: theme-light-logo
+
+## ADBC Python drivers
+
+Avoiding the overhead of row-by-row conversion to DataFrame:
+
+```python
+df = pd.DataFrame({"ints": np.arange(1_000_000), "floats": np.random.randn(1_000_000)})
+df.to_sql("test_table", "sqlite:///db.sqlite", index=False)
+```
+
+```python
+%timeit pd.read_sql("SELECT * FROM test_table;", "sqlite:///db.sqlite")
+# 1.87 s ± 17 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+```
+
+```python
+%%timeit
+import adbc_driver_sqlite.dbapi
+
+with adbc_driver_sqlite.dbapi.connect("file:db.sqlite") as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM test_table")
+        table = cur.fetch_arrow_table()
+
+# 150 ms ± 2.15 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
+```
+
+---
+class: theme-light-logo
+
+## Arrow and Substrait
+
+.pull-left[
+.center[
+![:scale 30%](img/arrow-logo_chevrons_black-txt_white-bg.png)
+
+**Apache Arrow**<br>
+a universal standard
+for representing
+tabular data
+
+
+]
+]
+
+.pull-right[
+.center[
+![:scale 26%](img/substrait-logo.svg)
+
+**Substrait**<br>
+a universal standard
+for representing
+relational operations
+
+]
+]
+
+<div style="margin-bottom: 100px;"></div>
+
+.center[
+https://substrait.io/
+]
+???
+
+These two standards are important for us because they will enable modularity and
+composability in the data analytics ecosystem. These two standards will enable users to
+pick a language, pick a query engine, pick a storage system and have them all work well
+together with excellent performance. 
+We want users to be able to mix and match, and trust that their workloads are
+portable. That's the antidote to vendor lock-in, data silos, and technology silos.
+
+---
+class: theme-light-logo
+
+## Arrow and Substrait
+
+.center[
+![:scale 85%](img/substrait-vision.png)
+]
+
+---
+
+class: theme-green-maximal
+
+## Thanks for listening! Questions?
+
+Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+- http://jorisvandenbossche.github.io/talks/2023_PyDataBerlin_Arrow
+
+
+.center[
+<a href="https://twitter.com/jorisvdbossche" style="color: var(--text-white)"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
+<a href="https://github.com/jorisvandenbossche" style="color: var(--text-white)"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<!-- <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script> -->
+<script src="../remark-latest.min.js"></script>
+<script src="libs/macros.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "solarized-light",
+"highlightLines": true,
+"highlightSpans": true,
+"countIncrementalSlides": false,
+"ratio": "16:9",
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc((%current% - 1) / (%total% - 1)* 100%);\">\n  </div>\n</div>\n"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
