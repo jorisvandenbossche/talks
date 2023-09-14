@@ -1,0 +1,830 @@
+  <!--
+
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>What the PDEP? An overview of some upcoming pandas changes</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+      <link rel="stylesheet" type="text/css" href="abs-layout.css" />
+      <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css" />
+
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono';   }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+![:scale 40%](img/pandas.svg)
+
+# What the PDEP?
+
+## An overview of some upcoming pandas changes
+
+
+Joris Van den Bossche<br>
+PyData Amsterdam, September 14, 2023
+
+Slides: https://github.com/jorisvandenbossche/talks
+
+---
+
+# About Joris
+
+Joris Van den Bossche
+<div style="margin-bottom:-20px"></div>
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, Apache Arrow, ...
+- Currently working part-time at Voltron Data on Apache Arrow
+
+.affiliations[
+  ![:scale 30%](img/apache-arrow.png)
+  ![:scale 64%](img/voltrondata-logo-green.png)
+]
+
+.center[
+<a href="https://twitter.com/jorisvdbossche"><img src="img/icon_twitter.svg" alt="Twitter logo" class="icon"> twitter.com/jorisvdbossche</a>
+<a href="https://github.com/jorisvandenbossche"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]
+
+---
+
+## pandas contributor community growth
+
+.center[
+![:scale 65%](img/pandas-committers-weekly2.png)
+]
+
+--
+count: false
+
+➔ need to update our governance (clarifying roles, updating decision making processes)
+
+---
+
+## Pandas Enhancement Proposals (PDEPs)
+
+A PDEP is a proposal for a major change in pandas, similar to a Python PEP or a NumPy NEP. New process introduced in process in August 2022.
+
+PDEP-1 describes the purpose and guidelines (currently deciding on voting mechanism for final decisions)
+
+See PDEPs on the pandas roadmap: https://pandas.pydata.org/about/roadmap.html
+
+---
+
+## Pandas Enhancement Proposals (PDEPs)
+
+See PDEPs on the pandas roadmap: https://pandas.pydata.org/about/roadmap.html
+
+* PDEP-4 [*Implemented in 2.0* ]: Consistent datetime parsing
+* PDEP-6 [*Accepted for 3.0* ]: Ban upcasting in setitem-like operations
+* PDEP-7 [*Open, planned for 3.0* ]: Consistent copy/view semantics with Copy-on-Write
+* PDEP-8 [*Open, planned for 3.0?* ]: Inplace methods in pandas
+* PDEP-10 [*Accepted for 3.0* ]: PyArrow as a required dependency for default string inference implementation
+* PDEP-11 [*Under discussion* ]: Change the default of dropna to False
+* PDEP-13 [*Under discussion* ]: Make the Series.apply method operate Series-wise
+
+???
+Other new pandas 2.0 features:
+
+- Non-nanosecond datetime resolutions
+
+---
+
+# Non-nanosecond resolution in Timestamps
+
+pandas only supported Timestamps in nanosecond resolution up until 2.0
+
+--
+count: false
+
+.larger[&rarr;] Only dates between 1677 and 2262 can be represented
+
+```python
+>>> pd.Timestamp("1000-01-01")
+OutOfBoundsDatetime: Out of bounds nanosecond timestamp: 1000-01-01 00:00:00
+
+```
+
+--
+count: false
+
+pandas 2.0 lifts this restriction!
+
+Timestamps can be created in the following units:
+
+- `seconds`
+- `milliseconds`
+- `microseconds`
+- `nanoseconds`
+---
+
+## How to enable the new resolutions
+
+`date_range` doesn't yet support non-nano resolutions. But `as_unit` or `astype` can be used to convert between units:
+
+```python
+>>> dr = pd.date_range("2020-01-01", periods=3, freq="D")
+>>> dr
+DatetimeIndex(['2020-01-01', '2020-01-02'], dtype=`'datetime64[ns]'`, freq='D')
+```
+
+--
+count: false
+
+```python
+>>> dr.`astype("datetime64[s]")`
+DatetimeIndex(['2020-01-01', '2020-01-02'], dtype=`'datetime64[s]'`, freq='D')
+```
+
+---
+count: false
+
+## How to enable the new resolutions
+
+`date_range` doesn't yet support non-nano resolutions. But `as_unit` or `astype` can be used to convert between units:
+
+The resolution of NumPy arrays is preserved:
+
+```python
+>>> arr = np.array(['2007-07-13', '2006-01-13'], dtype='datetime64[ms]')
+>>> arr
+array(['2007-07-13T00:00:00.000', '2006-01-13T00:00:00.000'], dtype=`'datetime64[ms]'`)
+
+>>> pd.Series(arr)
+0   2007-07-13
+1   2006-01-13
+dtype: `datetime64[ms]`
+```
+
+---
+
+# PDEP-4: Consistent datetime parsing
+
+Old behaviour: when not specifying a specific format, each value was being
+parsed independently:
+
+```python
+>>> pd.to_datetime(['12-01-2000 00:00:00', '13-01-2000 00:00:00'])
+DatetimeIndex([`'2000-12-01', '2000-01-13'`], dtype='datetime64[ns]', freq=None)
+```
+
+--
+count: false
+
+New behaviour in pandas 2.0: if no `format` is specified, the format will be guessed from the first string and applied to all values
+
+```python
+>>> pd.to_datetime(['12-01-2000 00:00:00', '13-01-2000 00:00:00'])
+...
+# ValueError: time data "13-01-2000 00:00:00" doesn't match format "%m-%d-%Y %H:%M:%S".
+# You might want to try:
+#    - passing \`format` if your strings have a consistent format;
+#    - passing \`format='ISO8601'` if your strings are all ISO8601 but not necessarily in exactly the same format;
+#    - passing \`format='mixed'`, and the format will be inferred for each element individually. You might want to use `dayfirst` alongside this.
+```
+
+Full details: https://pandas.pydata.org/pdeps/0004-consistent-to-datetime-parsing.html
+
+---
+class: center, middle
+
+# PDEP-7: Consistent copy/view semantics in pandas with Copy-on-Write
+
+### a.k.a. Getting rid of the SettingWithCopyWarning
+
+---
+
+# Current situation: SettingWithCopyWarning
+
+.highlight-red[
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+>>> subset = df[df["A"] > 1]
+>>> subset.loc[1, "C"] = 10
+
+*# SettingWithCopyWarning:
+*# A value is trying to be set on a copy of a slice from a DataFrame.
+*# Try using .loc[row_indexer,col_indexer] = value instead
+*#
+*# See the caveats in the documentation: ...
+```
+]
+
+---
+
+# Current situation: copy vs view
+
+.center[
+![:scale 80%](img/view-vs-copy.png)
+]
+
+Images from https://www.dataquest.io/blog/settingwithcopywarning/
+
+---
+
+# Current situation: copy vs view
+
+.center[
+![:scale 80%](img/view-vs-copy-modifying.png)
+]
+
+Images from https://www.dataquest.io/blog/settingwithcopywarning/
+
+
+
+
+???
+
+Copies and views in NumPy
+
+explain a view in numpy
+
+slicing gives view, mask gives copy
+
+---
+
+# The SettingWithCopyWarning
+
+How to "solve" the warning?
+
+--
+count: false
+
+I want do update `df` -> setitem in one go
+
+```python
+>>> df[df["A"] > 1]["C"] = 10      # this doesn't work
+>>> df["C"][df["A"] > 1] = 10      # this works
+>>> df.loc[df["A"] > 1, "C"] = 10  # this works
+```
+
+--
+count: false
+
+I don't want to update `df` -> explicit (unnecessary) `copy()`
+
+```python
+>>> subset = df[df["A"] > 1]`.copy()`
+>>> subset["C"] = 10
+```
+
+---
+
+# Current situation
+
+Problems with the current copy / view semantics of pandas:
+
+- This is confusing for many users
+- You need to be aware of copy/view details of NumPy
+- You need defensive (and unnecessary) copying to avoid the warning
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+--
+count: false
+
+Or put differently, the implication is:
+
+> *Mutating a DataFrame or Series only changes the object itself, and not any other.*
+
+> *If you want to change values in a DataFrame or Series, you can only do that by directly mutating the DataFrame/Series at hand*.
+
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- .section-highlight[A simpler, more consistent user experience]
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage and performance
+
+---
+
+## Previous example modifying a subset
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+*>>> subset = df[df["A"] > 1]
+>>> subset.loc[1, "C"] = 10
+```
+
+Did `df` change as well?
+
+--
+count: false
+
+No, `subset` is a different object, so mutating `subset` does not change `df`.
+
+And the answer is the same regardless how `subset` was created (selecting rows or columns, with a slice, mask, or list indexer, ..)
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always *behaves as* a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- .section-highlight[We can get rid of the SettingWithCopyWarning] (since there is no confusion about whether we are mutating a view or a copy)
+- We would no longer need defensive copying in many places in pandas, improving memory usage and performance
+
+---
+
+# The SettingWithCopyWarning
+
+With current pandas (trying to update `df`):
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+# two examples of chained assignment
+>>> df["C"][df["A"] > 1] = 10  # this works
+>>> df[df["A"] > 1]["C"] = 10  # this doesn't work
+```
+
+--
+count: false
+
+With new behaviour: both examples don't work
+
+```python
+>>> df["C"][df["A"] > 1] = 10  # this doesn't work
+>>> df[df["A"] > 1]["C"] = 10  # this doesn't work
+```
+
+---
+
+# The SettingWithCopyWarning
+
+With current pandas (trying to update `df`):
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+# two examples of chained assignment
+>>> df["C"][df["A"] > 1] = 10  # this works
+>>> df[df["A"] > 1]["C"] = 10  # this doesn't work
+```
+
+With new behaviour: chained assignment will never work -> we don't need the general warning.
+
+But to help the transition, we can specifically warn about chained assignment not working:
+
+.highlight-red[
+```python
+>>> df["C"][df["A"] > 1] = 10
+
+*# ChainedAssignmentError: A value is trying to be set on a copy of a DataFrame
+*# or Series through chained assignment.
+*# When using the Copy-on-Write mode, such chained assignment never works ...
+```
+]
+
+---
+
+# Can we do better?
+
+A proposal for simplified behaviour using a single rule:
+
+> *Any DataFrame or Series derived from another in any way (e.g. with an indexing operation) always behaves as a copy.*
+
+Advantages:
+
+- A simpler, more consistent user experience
+- We can get rid of the SettingWithCopyWarning (since there is no confusion about whether we are mutating a view or a copy)
+- .section-highlight[We would no longer need defensive copying in many places in pandas, improving memory usage and performance]
+
+---
+
+# The SettingWithCopyWarning
+
+With current pandas (not wanting to update `df`):
+
+```python
+>>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+>>> subset = df[df["A"] > 1]`.copy()`
+...
+>>> subset["C"] = 10
+```
+
+With new behaviour: additional `copy()` is no longer needed to avoid the warning.
+
+---
+
+## Avoiding copies with Copy-on-Write
+
+The usage of view vs copy can become an internal implementation detail
+
+➔ We can avoid copies by default using Copy-on-Write!
+
+--
+
+**Small benchmark**: create DataFrame of 2 million rows by 30 columns (mix of float, integer and string columns)
+
+```python
+%%timeit
+(df.rename(columns={"col_1": "new_index"})
+   .assign(sum_val=df["col_1"] + df["col_2"])
+   .drop(columns=["col_10", "col_20"])
+   .astype({"col_5": "int32"})
+   .reset_index()
+   .set_index("new_index")
+)
+```
+
+```
+2.45 s ± 293 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+```
+--
+count: false
+
+```
+# with Copy-on-Write enabled
+*13.7 ms ± 286 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+```
+
+---
+
+## How do I try this?
+
+Enable it in pandas 2.0:
+
+```python
+import pandas as pd
+pd.options.mode.copy_on_write = True
+```
+
+* We encourage you to try it out!
+* We expect it to become the default behaviour in pandas 3.0
+* Blogposts:
+  * https://jorisvandenbossche.github.io/blog/2022/04/07/pandas-copy-views/
+  * https://medium.com/towards-data-science/a-solution-for-inconsistencies-in-indexing-operations-in-pandas-b76e10719744
+* Full proposal: https://github.com/pandas-dev/pandas/pull/51463/
+
+.center[
+## Feedback welcome!
+]
+
+---
+class: center, middle
+
+# PDEP-10: PyArrow as a required dependency for default string inference implementation
+
+---
+
+## Avoid object dtype for strings by default
+
+Currently:
+
+```python
+>>> pd.Series(["a", "b", "c"])
+0    a
+1    b
+2    c
+dtype: `object`
+```
+
+--
+count: false
+
+Future behaviour:
+
+```python
+>>> pd.options.future.infer_string = True
+>>> pd.Series(["a", "b", "c"])
+0    a
+1    b
+2    c
+dtype: `string[pyarrow]`
+```
+
+Planned for 3.0 by default, but you can already opt-in starting with pandas 2.1
+
+---
+
+## PyArrow-backed string dtype
+
+PyArrow offers fast and efficient in-memory string operations.
+
+This provides:
+
+- significantly improved performance compared to NumPy's object dtype with Python `str` operations
+- smaller memory footprint
+
+--
+count: false
+
+- compatible with existing object-dtype-based string methods (all `.str.` string accessor methods keep working)
+
+---
+
+## Let's look at some performance/memory comparisons
+
+```python
+import string
+import random
+
+import pandas as pd
+
+
+def random_string() -> str:
+    return "".join(random.choices(string.printable, k=random.randint(10, 100)))
+
+
+ser_object = pd.Series([random_string() for _ in range(1_000_000)])
+ser_string = ser_object.astype("string[pyarrow]")
+```
+
+---
+
+## Let's look at some performance/memory comparisons
+
+### str.length
+
+```python
+In[1]: %timeit ser_object.str.len()
+118 ms ± 260 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
+
+In[2]: %timeit ser_string.str.len()
+*24.2 ms ± 187 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
+```
+
+--
+count: false
+
+### str.startswith
+
+```python
+In[3]: %timeit ser_object.str.startswith("a")
+136 ms ± 300 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
+
+In[4]: %timeit ser_string.str.startswith("a")
+*11 ms ± 19.8 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+
+```
+
+---
+
+## Let's look at some performance/memory comparisons
+
+### memory footprint
+
+```python
+In [5]: "{:.2f} MiB".format(ser_object.memory_usage(deep=True) / 1024**2)
+Out[5]: '106.82 MiB'
+
+In [6]: "{:.2f} MiB".format(ser_string.memory_usage(deep=True) / 1024**2)
+*Out[6]: '56.28 MiB'
+```
+
+---
+
+## PyArrow-backed string dtype by default in 3.0
+
+* PyArrow will become a **required** dependency of pandas starting with pandas 3.0
+* The PyArrow-backed string dtype will be used by default (no more object dtype for strings!)
+
+
+### How do I try this now?
+
+Enable it in pandas 2.1:
+
+```python
+pd.options.future.infer_string = True
+```
+
+* PDEP: https://pandas.pydata.org/pdeps/0010-required-pyarrow-dependency.html
+* Blogpost of Patrick Höfler about improvements in pandas and dask: https://towardsdatascience.com/utilizing-pyarrow-to-improve-pandas-and-dask-workflows-2891d3d96d2b
+
+
+---
+
+## Speeding up I/O operations with PyArrow engine
+
+Some I/O functions gained an `engine` keyword to parse the input with PyArrow.
+
+- `read_csv` and `read_json` can dispatch to PyArrow readers.
+- `read_parquet` and `read_orc` use PyArrow natively to read the input.
+
+➔ Huge [performance improvements](https://datapythonista.me/blog/pandas-with-hundreds-of-millions-of-rows) and uses multithreading
+
+---
+
+## Arrow-backed data types
+
+Using PyArrow arrays to store the data of a DataFrame.
+.center[
+![:scale 100%](img/pandas_arrow.svg)
+]
+
+ _ __Apache Arrow__ defines a language-independent columnar memory format for flat and hierarchical data, organized_
+_for efficient analytic operations on modern hardware like CPUs and GPUs._
+
+---
+
+## Arrow-backed data types
+
+PyArrow offers support for a wide variety of dtypes (not well supported by pandas right now): 
+
+* string, bytes, decimal, date, explicit null-datatype, nested data and [many more](https://arrow.apache.org/docs/python/api/datatypes.html#data-types-and-schemas).
+
+--
+count: false
+
+.larger[Experimental `ArrowDtype` for using any Arrow type in a column]
+
+```python
+>>> import pyarrow as pa
+>>> pd.Series([1, 2, 3], dtype=pd.ArrowDtype(pa.int64()))
+0   1
+1   2
+2   3
+dtype: `int64[pyarrow]`
+```
+
+These columns use the PyArrow memory layout and compute functionality.
+
+--
+count: false
+
+➔ opt-in using new `dtype_backend="pyarrow"` keyword in IO methods, or `df.convert_dtypes(dtype_backend="pyarrow")` to convert afterwards
+
+???
+
+Warning: experimental!
+
+---
+
+## PDEP-6: Ban upcasting in setitem-like operations
+
+```python
+df = pd.DataFrame({"a": [1, 2, 3]})
+df.loc[1, "a"] = 3.5
+df.loc[1, "a"] = "3"
+```
+
+--
+count: false
+
+When assigning a value into a Series that would cause the dtype to change, it is not clear
+what the user wants to happen. Different users may want different things.
+
+-> pandas shoudn't guess!
+
+Summary: Assignments into an existing Series that would change the dtype will now raise.
+
+Full proposal: https://github.com/pandas-dev/pandas/pull/50402
+
+---
+
+## PDEP-8: In-place methods in pandas
+
+Proposal (still being discussed!):
+
+- The `inplace` parameter will be deprecated and removed from any method that can never be done inplace
+- The `inplace` parameter is kept only in a few methods such as `fillna()`
+
+For example, replace
+
+```python
+df.reset_index(inplace=True)
+```
+
+with
+
+```python
+df = df.reset_index()
+```
+
+Full proposal: https://github.com/pandas-dev/pandas/pull/51466
+
+---
+
+## PDEP-11: Change the default of dropna to False
+
+Motivating Example: Compute the average time for groups of 3 runners.
+
+```python
+df = pd.read_excel("runner_times.xlsx")
+df.value_counts("group")
+result = df.groupby("group")[["seconds"]].mean()
+result.to_excel("group_means.xlsx")
+```
+
+- Some methods (`stack`, `pivot_table`) do not behave well with `dropna=False`
+  - You can try the new implementation of `stack` in version 2.1!
+- What should we do with `mode`?
+  - If `mode` is counting values, then it should have `dropna=False`.
+  - If `mode` is a stats method like `mean` and `median`, then it should have `skipna=True`
+
+Full proposal: https://github.com/pandas-dev/pandas/pull/53094
+
+---
+
+## Pandas 2.1.0 
+
+Released end of August!
+
+Highlights not already mentioned:
+
+- DataFrame reductions preserve extension dtypes (e.g. PyArrow dtypes and nullable-dtypes)
+- Performance improvement in groupby with PyArrow dtypes
+- Many Copy-on-Write improvements
+- Added `DataFrame.map`; deprecated `DataFrame.applymap`. The `na_action` argument works with extension dtypes.
+- Better numba support in groupby
+
+.center[*Welcome to try it out and report any issue with upgrading!*]
+
+---
+
+# Thanks to all contributors!
+
+Pandas is a community project, and everything we talked about is the result of this community of contributors
+
+A total of 266 people contributed to the 2.1 release! (and that's only counting commits on the main repo)
+
+--
+count: false
+
+<div style="margin-bottom:50px"></div>
+
+.larger[You can become part of this community as well!
+
+➔ First opportunity: join the pandas sprint on Saturday afternoon]
+
+--
+count: false
+
+<div style="margin-bottom:50px"></div>
+
+
+.larger[Those slides: https://github.com/jorisvandenbossche/talks]
+
+
+---
+class: center, middle
+count: false
+
+![:scale 40%](img/pandas.svg)
+
+.larger[Those slides: https://github.com/jorisvandenbossche/talks]
+
+
+
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="remark-0.15.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: "16:9",
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>

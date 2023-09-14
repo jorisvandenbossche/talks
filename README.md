@@ -33,3 +33,5 @@ FOSS4G Belgium slides: https://jorisvandenbossche.github.io/talks/2022_FOSS4GBE_
 PyData Global 2022 - Pandas copy/view: https://jorisvandenbossche.github.io/talks/2022_PyDataGlobal_pandas-copy-view/
 
 GeoPython 2023 - Shapely 2.0 slides: https://jorisvandenbossche.github.io/talks/2023_GeoPython_Shapely-2.0/#1
+
+PyData Amsterdam 2023 - What the PDEP? An overview of some upcoming pandas changes: https://jorisvandenbossche.github.io/2023_PyDataAmsterdam_pandas-pdeps/#1
