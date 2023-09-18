@@ -1,0 +1,332 @@
+
+
+:root {
+
+  /* Colors */
+  --primary-green: #005050;
+  --accent-green: #8cffaf;
+  --text-white: #ffffff;
+  --text-black: #000000;
+  --accent-dark: #4f4f4f;
+  --accent-light: #b0b0b0;
+  --bg-dark: #090909;
+  --bg-light: #f6f6f6;
+  --contrast-light: #f97b64;
+  --contrast-dark: #b92307;
+}
+
+
+/* ----- each of the logo themes combines different pair of images ----- */
+
+/* moderate amount of space devoted to visual elements */
+.theme-green {
+  background-image: 
+    url("../img/voltrondata-logo-green-accent.png"),
+    url("../img/voltrondata-wallpaper-green-medium.png");
+}
+.theme-light {
+  background-image: 
+    url("../img/voltrondata-logo-dark-accent.png"),
+    url("../img/voltrondata-wallpaper-light-medium.png");
+}
+.theme-dark {
+  background-image: 
+    url("../img/voltrondata-logo-light-accent.png"),
+    url("../img/voltrondata-wallpaper-dark-medium.png");
+}
+
+/* medium space devoted to visual elements */
+.theme-green-minimal {
+  background-image: 
+    url("../img/voltrondata-logo-green-accent.png"),
+    url("../img/voltrondata-wallpaper-green-small.png");
+}
+.theme-light-minimal {
+  background-image: 
+    url("../img/voltrondata-logo-dark-accent.png"),
+    url("../img/voltrondata-wallpaper-light-small.png");
+}
+.theme-dark-minimal {
+  background-image: 
+    url("../img/voltrondata-logo-light-accent.png"),
+    url("../img/voltrondata-wallpaper-dark-small.png");
+}
+
+/* maximal amount of space devoted to visual elements */
+
+.theme-green-maximal {
+  background-image: 
+    url("../img/voltrondata-logo-green-accent.png"),
+    url("../img/voltrondata-wallpaper-green-large.png");
+}
+.theme-light-maximal {
+  background-image: 
+    url("../img/voltrondata-logo-dark-accent.png"),
+    url("../img/voltrondata-wallpaper-light-large.png");
+}
+.theme-dark-maximal {
+  background-image: 
+    url("../img/voltrondata-logo-light-accent.png"),
+    url("../img/voltrondata-wallpaper-dark-large.png");
+}
+
+/* ----- all of the logo themes use the same positioning ----- */
+
+.theme-green, .theme-green-minimal, .theme-green-maximal,
+.theme-light, .theme-light-minimal, .theme-light-maximal,
+.theme-dark, .theme-dark-minimal, .theme-dark-maximal {
+    background-size: 
+    auto 50px, 
+    cover;
+  background-repeat: 
+    no-repeat,
+    no-repeat;
+  background-position: 
+    top 32px right 64px, 
+    left;
+}
+
+
+/* ----- the nologo classes have only one background image ----- */
+
+/* moderate amount of space devoted to visual elements */
+.theme-green-nologo {
+  background-image: url("../img/voltrondata-wallpaper-green-medium.png");
+}
+.theme-light-nologo {
+  background-image: url("../img/voltrondata-wallpaper-light-medium.png");
+}
+.theme-dark-nologo {
+  background-image: url("../img/voltrondata-wallpaper-dark-medium.png");
+}
+
+/* medium space devoted to visual elements */
+.theme-green-minimal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-green-small.png");
+}
+.theme-light-minimal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-light-small.png");
+}
+.theme-dark-minimal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-dark-small.png");
+}
+
+/* maximal amount of space devoted to visual elements */
+
+.theme-green-maximal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-green-large.png");
+}
+.theme-light-maximal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-light-large.png");
+}
+.theme-dark-maximal-nologo {
+  background-image: url("../img/voltrondata-wallpaper-dark-large.png");
+}
+
+
+
+/* ----- all of the nologo themes use the same positioning ----- */
+
+.theme-green-nologo, .theme-green-minimal-nologo, .theme-green-maximal-nologo,
+.theme-light-nologo, .theme-light-minimal-nologo, .theme-light-maximal-nologo,
+.theme-dark-nologo, .theme-dark-minimal-nologo, .theme-dark-maximal-nologo {
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: left;
+}
+
+
+/* ----- all the green themes use the same colour scheme ----- */
+
+.theme-green, .theme-green-minimal, .theme-green-maximal,
+.theme-green-nologo, .theme-green-minimal-nologo, .theme-green-maximal-nologo {
+  background-color: var(--primary-green);
+  color: var(--text-white);
+}
+.theme-green > h1, .theme-green-minimal > h1, .theme-green-maximal > h1,
+.theme-green > h2, .theme-green-minimal > h2, .theme-green-maximal > h2,
+.theme-green > h3, .theme-green-minimal > h3, .theme-green-maximal > h3,
+.theme-green-nologo > h1, .theme-green-minimal-nologo > h1, .theme-green-maximal-nologo > h1,
+.theme-green-nologo > h2, .theme-green-minimal-nologo > h2, .theme-green-maximal-nologo > h2,
+.theme-green-nologo > h3, .theme-green-minimal-nologo > h3, .theme-green-maximal-nologo > h3 {
+  color: var(--text-white);
+}
+.theme-green .remark-inline-code,
+.theme-green-minimal .remark-inline-code,
+.theme-green-maximal .remark-inline-code,
+.theme-green-nologo .remark-inline-code,
+.theme-green-minimal-nologo .remark-inline-code,
+.theme-green-maximal-nologo .remark-inline-code {
+  color: var(--accent-green);
+}
+.theme-green a, .theme-green-minimal a, .theme-green-maximal a,
+.theme-green a > code, .theme-green-minimal a > code, .theme-green-maximal a > code,
+.theme-green-nologo a, .theme-green-minimal-nologo a, .theme-green-maximal-nologo a,
+.theme-green-nologo a > code, .theme-green-minimal-nologo a > code, .theme-green-maximal-nologo a > code {
+  color: var(--contrast-light);
+}
+
+.theme-green strong, .theme-green-minimal strong, .theme-green-maximal strong {
+  color: var(--accent-green);
+}
+
+
+/* ----- all the light themes use the same colour scheme ----- */
+
+.theme-light, .theme-light-minimal, .theme-light-maximal,
+.theme-light-nologo, .theme-light-minimal-nologo, .theme-light-maximal-nologo {
+  background-color: var(--bg-light);
+  color: var(--text-black);
+}
+.theme-light > h1, .theme-light-minimal > h1, .theme-light-maximal > h1,
+.theme-light > h2, .theme-light-minimal > h2, .theme-light-maximal > h2,
+.theme-light > h3, .theme-light-minimal > h3, .theme-light-maximal > h3,
+.theme-light-nologo > h1, .theme-light-minimal-nologo > h1, .theme-light-maximal-nologo > h1,
+.theme-light-nologo > h2, .theme-light-minimal-nologo > h2, .theme-light-maximal-nologo > h2,
+.theme-light-nologo > h3, .theme-light-minimal-nologo > h3, .theme-light-maximal-nologo > h3 {
+  color: var(--text-black);
+}
+.theme-light .remark-inline-code,
+.theme-light-minimal .remark-inline-code,
+.theme-light-maximal .remark-inline-code,
+.theme-light-nologo .remark-inline-code,
+.theme-light-minimal-nologo .remark-inline-code,
+.theme-light-maximal-nologo .remark-inline-code {
+  color: var(--primary-green);
+}
+.theme-light a, .theme-light-minimal a, .theme-light-maximal a,
+.theme-light a > code, .theme-light-minimal a > code, .theme-light-maximal a > code,
+.theme-light-nologo a, .theme-light-minimal-nologo a, .theme-light-maximal-nologo a,
+.theme-light-nologo a > code, .theme-light-minimal-nologo a > code, .theme-light-maximal-nologo a > code {
+  color: var(--contrast-dark);
+}
+
+
+
+/* ----- all the dark themes use the same colour scheme ----- */
+
+.theme-dark, .theme-dark-minimal, .theme-dark-maximal,
+.theme-dark-nologo, .theme-dark-minimal-nologo, .theme-dark-maximal-nologo {
+  background-color: var(--bg-dark);
+  color: var(--text-white);
+}
+.theme-dark > h1, .theme-dark-minimal > h1, .theme-dark-maximal > h1,
+.theme-dark > h2, .theme-dark-minimal > h2, .theme-dark-maximal > h2,
+.theme-dark > h3, .theme-dark-minimal > h3, .theme-dark-maximal > h3,
+.theme-dark-nologo > h1, .theme-dark-minimal-nologo > h1, .theme-dark-maximal-nologo > h1,
+.theme-dark-nologo > h2, .theme-dark-minimal-nologo > h2, .theme-dark-maximal-nologo > h2,
+.theme-dark-nologo > h3, .theme-dark-minimal-nologo > h3, .theme-dark-maximal-nologo > h3 {
+  color: var(--text-white);
+}
+.theme-dark .remark-inline-code,
+.theme-dark-minimal .remark-inline-code,
+.theme-dark-maximal .remark-inline-code,
+.theme-dark-nologo .remark-inline-code,
+.theme-dark-minimal-nologo .remark-inline-code,
+.theme-dark-maximal-nologo .remark-inline-code {
+  color: var(--accent-green);
+}
+.theme-dark a, .theme-dark-minimal a, .theme-dark-maximal a,
+.theme-dark a > code, .theme-dark-minimal a > code, .theme-dark-maximal a > code,
+.theme-dark-nologo a, .theme-dark-minimal-nologo a, .theme-dark-maximal-nologo a,
+.theme-dark-nologo a > code, .theme-dark-minimal-nologo a > code, .theme-dark-maximal-nologo a > code {
+  color: var(--contrast-light);
+}
+
+
+/* font size classes */
+.larger { font-size: 200% }
+.large { font-size: 130% }
+.midi { font-size: 85% }
+.small { font-size: 70% }
+.xsmall { font-size: 60% }
+.tiny { font-size: 50% }
+
+
+/* add small margins above and below headers */
+h1, h2, h3 {
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-right: 0px;
+  margin-left: 0px;
+}
+
+/* alignment */
+.right{ text-align: right }
+
+
+/* boldface */
+.boldface{
+  font-weight: bold;
+}
+
+/* wide left column, narrow right column */
+.pull-left-wide {
+  width: 70%;
+  float: left;
+}
+.pull-right-narrow {
+  width: 27%;
+  float: right;
+}
+.pull-right-narrow ~ * {
+  clear: both;
+}
+
+/* narrow left column, wide right column */
+.pull-left-narrow {
+  width: 30%;
+  float: left;
+}
+.pull-right-wide {
+  width: 67%;
+  float: right;
+}
+.pull-right-wide ~ * {
+  clear: both;
+}
+
+/* clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* footer */
+div.my-footer {
+    position: absolute;
+    bottom: 0px;
+    height: 35px;
+    width: 90%;
+}
+div.my-footer span {
+    font-size: 12pt;
+    position: absolute;
+    color: #333333;
+    bottom: 10px;
+}
+div.my-footer a {
+    font-size: 12pt;
+    color: #ffffff;
+}
+
+
+/* progress bar */
+/* based on: https://github.com/yihui/xaringan/wiki/Progressbar */
+.remark-slide-number {
+  position: inherit;
+}
+.remark-slide-number .progress-bar-container {
+  position: absolute;
+  bottom: 0;
+  height: 4px;
+  display: block;
+  left: 0;
+  right: 0;
+}
+.remark-slide-number .progress-bar {
+  height: 100%;
+  background-color: var(--contrast-light);
+}
+
