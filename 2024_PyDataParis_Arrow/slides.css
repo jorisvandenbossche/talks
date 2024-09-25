@@ -1,0 +1,460 @@
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: normal;
+  background-color: #EEF1F9;
+}
+
+.remark-slide-content {
+  background-color: #EEF1F9;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /* font-family: 'Plus Jakarta Sans', sans-serif; */
+  font-family: 'Space Grotesk', sans-serif;
+  /* font-weight: 300; */
+  margin-top: 0;
+}
+h1 {
+  margin-top: 0.5em;
+}
+h2 {
+  margin-top: 0.4em;
+  font-size: 140%;
+  line-height: 150%;
+}
+h3 {
+  font-size: 120%;
+  line-height: 140%;
+}
+
+li {
+  font-size: 120%;
+  line-height: 150%;
+}
+
+li li {
+  font-size: 100%;
+  line-height: 160%;
+}
+
+p {
+font-size: 120%;
+  line-height: 140%;
+}
+
+.singleimg .middlebelowheader {
+  text-align: center;
+}
+
+.singleimg img {
+  max-width: 90%;
+  max-height: 600px;
+  /*border: 2px solid #ddd;*/
+}
+table {
+  margin: 0 auto 0.8em;
+  border-collapse: collapse;
+}
+td, th {
+  border: 1px solid #ddd;
+  padding: 0.3em 0.5em;
+}
+
+.bgheader h1 {
+  background-color: rgba(0, 0, 0, 0.9);
+  opacity: 50%;
+  padding: 0.5em;
+  color: white;
+  border-radius: .5em;
+}
+.middlebelowheader {
+  /* This fixed size height was found to work well with the slide
+     scaling mechanism of remark.js:
+   */
+  height: 500px;
+  display: table-cell;
+  vertical-align: middle;
+}
+.widespace h2 {
+  line-height: 200%;
+}
+.big .remark-code  {
+  font-size: 200%;
+}
+
+.remark-code {
+  background: white !important;
+}
+
+.remark-code, .remark-inline-code {
+   font-family: 'DM Mono', monospace;
+   font-size: 110%;
+}
+
+.medium .remark-code  {
+  font-size: 150%;
+}
+
+.mmedium .remark-code  {
+  font-size: 99%;
+}
+
+.small .remark-code  {
+  font-size: 93%;
+}
+
+.affiliations img {
+  /*height: 100px;*/
+  margin: 2em;
+  margin-right: 0.5em;
+  margin-left:0.5em;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.small {
+  font-size: 90%;
+}
+
+.smaller {
+  font-size: 80%;
+}
+
+.larger {
+  font-size: 120%;
+}
+
+.credits {
+  font-style: italic;
+  font-size: 70%;
+}
+
+.bunchoflogos img {
+  max-height: 100px;
+  padding: 1em;
+}
+
+.bunchoflogos p {
+  text-align: center;
+  width: 750px;
+}
+
+a:visited {
+  color: #447373;
+}
+
+.inverse a:visited {
+  color: #f3f3f3;
+}
+
+.inverse {
+  background: #26374a;
+  color: #f3f3f3;
+  text-shadow: 0 0 20px #333;
+}
+.inverse h1, .inverse h2 {
+  color: #f3f3f3;
+}
+
+code {
+  /* background: #ffffff; */
+  border-radius: 5px;
+}
+.pull-left {
+  float: left;
+  width: 47%;
+}
+.pull-right {
+  float: right;
+  width: 47%;
+}
+.pull-right ~ p {
+  clear: both;
+}
+
+.left-column {
+    width: 49%;
+    float: left;
+    /* font-size: 120%; */
+    margin-top: -20px;
+}
+.right-column {
+    width: 49%;
+    float: left;
+    /* font-size: 120%; */
+    margin-top: -20px;
+}
+.right-column {
+    float: right;
+}
+.left-column {
+    float: left;
+}
+.reset-column {
+    overflow: auto;
+    width: 100%;
+  }
+
+.red { color: #fa0000; }
+.blue { color: #0000ff; }
+.darkred {color: #C10000;}
+
+.accent { color: #005151; }
+
+.fat { font-weight: 800; }
+
+
+/*@page {
+  size: 1024px 768px;
+  margin: 0;
+}
+
+@media print {
+  .remark-slide-scaler {
+    width: 100% !important;
+    height: 100% !important;
+    transform: scale(1) !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+}*/
+
+.cols {
+  display: flex;
+}
+
+.fifty {
+  flex: 50%;
+}
+
+
+blockquote {
+  border-left: 0.2em solid #ccc;
+  padding: 0 20px;
+}
+
+.bottom {
+  bottom: 1.5em;
+  right: 4.5em;
+  position: absolute;
+  font-size: 140%;
+}
+
+/* 
+.width-5 * {
+    width: 5%;
+}
+
+.width-10 * {
+    width: 10%;
+}
+
+.width-15 * {
+    width: 15%;
+}
+
+.width-20 * {
+    width: 20%;
+}
+
+.width-25 * {
+    width: 25%;
+}
+
+.width-30 * {
+    width: 30%;
+}
+
+.width-35 * {
+    width: 35%;
+}
+
+.width-40 * {
+    width: 40%;
+}
+
+.width-45 * {
+    width: 45%;
+}
+
+.width-50 * {
+    width: 50%;
+}
+
+.width-55 * {
+    width: 55%;
+}
+
+.width-60 * {
+    width: 60%;
+}
+
+.width-65 * {
+    width: 65%;
+}
+
+.width-70 * {
+    width: 70%;
+}
+
+.width-75 * {
+    width: 75%;
+}
+
+.width-80 * {
+    width: 80%;
+}
+
+.width-85 * {
+    width: 85%;
+}
+
+.width-90 * {
+    width: 90%;
+}
+
+.width-95 * {
+    width: 95%;
+}
+
+.width-100 * {
+    width: 100%;
+}
+
+.width-105 * {
+    width: 105%;
+}
+
+.width-110 * {
+    width: 110%;
+}
+
+.width-115 * {
+    width: 115%;
+}
+
+.width-120 * {
+    width: 120%;
+}
+
+.width-125 * {
+    width: 125%;
+}
+
+.width-130 * {
+    width: 130%;
+}
+
+.width-135 * {
+    width: 135%;
+}
+
+.width-140 * {
+    width: 140%;
+}
+
+.width-145 * {
+    width: 145%;
+}
+
+.width-150 * {
+    width: 150%;
+}
+
+.width-155 * {
+    width: 155%;
+}
+
+.width-160 * {
+    width: 160%;
+}
+
+.width-165 * {
+    width: 165%;
+}
+
+.width-170 * {
+    width: 170%;
+}
+
+.width-175 * {
+    width: 175%;
+}
+
+.width-180 * {
+    width: 180%;
+}
+
+.width-185 * {
+    width: 185%;
+}
+
+.width-190 * {
+    width: 190%;
+}
+
+.width-195 * {
+    width: 195%;
+}
+
+.width-200 * {
+    width: 200%;
+} */
+
+
+.circle img {
+    border-radius: 50%;
+}
+
+
+.smaller-x {
+    font-size: 0.8em;
+}
+
+
+.theme-voltron-title-slide-light {
+  background-image: url("img/zoom-meet-background-02.png");
+}
+
+
+.theme-voltron-title-slide-light {
+  background-size: 
+    auto 50px, 
+    cover;
+  background-repeat: 
+    no-repeat,
+    no-repeat;
+  background-position: 
+    top 32px right 64px, 
+    left;
+}
+
+.theme-voltron-title-slide-light {
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: left;
+}
+
+.theme-voltron-title-slide-light > h2 {
+  line-height: 115%;
+}
+
+
+.theme-title-slide-dark {
+  background-color:black;
+  color: white;
+  padding-left: 2em;
+}
+
+.theme-title-slide-dark > h1 {
+  background: rgb(0,81,81);
+  background: linear-gradient(90deg, rgba(0,81,81,1) 0%, rgba(0,0,0,1) 60%);
+  padding: 1em 1em 1em 0.5em;
+}
+
+/* li::marker {
+  content: "■  ";
+  font-size: 1rem;
+} */
