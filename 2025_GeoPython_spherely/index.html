@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spherely</title>
+    <meta charset="utf-8">
+      <link rel="stylesheet" type="text/css" href="slides.css">
+      <link rel="stylesheet" type="text/css" href="abs-layout.css" />
+<!--    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      #slideshow .slide .content .cols.two .col { width: 48%; }
+    </style>
+-->
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle, inverse
+
+.center[
+![:scale 40%](img/countries-round-.gif)
+]
+
+# The earth is no longer flat!
+
+## Introducing Spherely and support for spherical geometries in GeoPandas
+
+Joris Van den Bossche, GeoPython, February 25, 2025
+
+https://github.com/jorisvandenbossche/talks/
+
+---
+
+# About me
+
+.larger[**Joris Van den Bossche**]
+
+<img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
+
+- Background: PhD bio-science engineer, air quality research
+- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, Apache Arrow (pyarrow), ...
+- Currently working as a software engineer at Fused
+
+<div style="margin-bottom:0px; clear: both"></div>
+
+.center[
+.affiliations[
+  ![:scale 50%](img/geopandas_logo.svg)
+  ![:scale 35%](img/arrow-logo_horizontal_black-txt_transparent-bg.svg)
+]
+]
+
+<div style="margin-bottom:-30px"></div>
+
+.center[
+<a href="https://fosstodon.org/@jorisvandenbossche" style="color: var(--primary)"><img src="img/mastodon-svgrepo-com.svg" alt="Twitter logo" class="icon"> fosstodon.org/@jorisvandenbossche</a>
+<a href="https://github.com/jorisvandenbossche" style="color: var(--primary)"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]
+
+.abs-layout.top-10.left-70[
+  ![:scale 100%](img/Symbol-text-white-bg-transparent.svg)
+]
+
+---
+class: inverse
+
+# Fused
+
+### Build with data, instantly.
+
+* Serverless Python at scale
+  * Use the Python stack you are familiar with
+  * Call from anywhere (Python, HTTP, ...)
+  * Parallel processing and caching
+
+* Geospatial focus
+  * Ingest data into Cloud Native formats
+  * Integrate with maps and web apps
+
+.abs-layout.top-10.left-80[
+  ![:scale 200%](img/Symbol-black-bg-transparent.svg)
+]
+
+.abs-layout.top-37.left-57[
+  ![:scale 90%](img/fused-workbench.png)
+]
+
+--
+count: false
+
+.center[
+## https://fused.io - We are hiring!
+]
+
+---
+
+class: center, middle
+
+# Your data is this:
+
+### longitude: 7.59..., latitude: 47.56...
+
+
+.bottom[.smaller-x[
+From https://dewey.dunnington.ca/slides/s22021/
+]]
+---
+class:
+# ...but the world is not this:
+
+.center[
+![:scale 80%](img/illustration-world-flat.svg)
+]
+
+.bottom[.smaller-x[
+From https://dewey.dunnington.ca/slides/s22021/
+]]
+
+
+---
+class: inverse, center
+
+# it's this:
+
+.center[
+![:scale 70%](img/countries-round-.gif)
+]
+
+.bottom[.smaller-x[
+From https://dewey.dunnington.ca/slides/s22021/
+]]
+
+
+---
+
+# GeoPandas with geographical coordinates
+
+
+```python
+>>> land = geopandas.read_file(geodatasets.get_path("naturalearth.land"))
+>>> land.geometry.buffer(1)
+*UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect.
+*Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+0      POLYGON ((-66.42576 -81.31759, -66.7624 -81.13...
+1      POLYGON ((-163.65367 -79.70714, -164.10358 -79...
+2      POLYGON ((-45.01324 -77.05713, -44.918 -77.075..
+...
+```
+
+---
+
+# GeoPandas with projected coordinates
+
+Use a suitable projected CRS for your study area.
+
+.center[
+![:scale 55%](img/illustration-belgium.svg)
+]
+
+And this works perfectly fine if possible!<br>
+For example, in Belgium we have Belgian Lambert 72, a.k.a. EPSG:31370)
+
+---
+# Why not using projected coordinates?
+
+- my data is in latitude / longitude coordinates
+- projection is not always trivial
+  - choose a coordinate system depending on location, extent, etc.
+  - may be computationally expensive
+- boundary singularities, distortion.
+
+<div style="margin-bottom:-30px"></div>
+
+.center[![:scale 50%](./img/mercator_projection_area.gif)]
+
+---
+
+# Projecting global datasets
+
+```python
+>>> land.to_crs("EPSG:3857")  # Web Mercator
+```
+
+.center[![:scale 20%](./img/illustration-projection-mercator.svg)]
+
+---
+
+# Geometries crossing the anti-meridian
+
+Example: Fiji - planar splitted geometries
+
+.center[![:scale 80%](img/illustration-bbox-fiji-1.svg)]
+
+---
+count: false
+
+# Geometries crossing the anti-meridian
+
+Example: Fiji - planar bounding box
+
+.center[![:scale 80%](img/illustration-bbox-fiji-2.svg)]
+
+
+---
+
+## Global analysis: which feature is within 500 km of land?
+
+
+.center[
+![:scale 80%](img/illustration-distance-land-1.svg)
+]
+
+---
+
+## Great circles: shortest path on the sphere
+
+.center[
+![](img/illustration-great-circle-1.svg)
+]
+
+---
+
+## Great circles: shortest path on the sphere
+
+.center[
+![](img/illustration-great-circle-2.svg)
+]
+
+
+---
+
+## Great circles: shortest path on the sphere
+
+.center[
+![:scale 40%](img/illustration-great-circle-3.svg)
+]
+
+---
+# Polygon edges
+
+.center[
+![](img/illustration-pole-polygon-1.svg)
+]
+
+
+.bottom[.small-x[
+From https://r-spatial.org/r/2020/06/17/s2.html
+]]
+
+---
+# Polygon edges
+
+.center[
+![:scale 40%](img/illustration-pole-polygon-2.svg)
+]
+
+
+---
+# Polygon edges
+
+.center[
+![:scale 40%](img/illustration-pole-polygon-3.svg)
+]
+
+
+
+---
+
+# The shape of the Earth
+
+.cols[
+.flex50[
+.center.width-100[![:scale 60%](./img/flat-earth-blue.png)]
+]
+.flex50[
+.center.width-100[![:scale 40%](./img/globe.png)]
+]
+]
+.cols[
+.flex50[
+.center.larger.bold[NO!]
+]
+.flex50[
+.center.larger.bold[YES!]
+]
+]
+
+.center[.width-10[![](./img/globe-ellipse.png)].width-10[![](./img/geoid-blue.png)]]
+.center.smaller-x[(Yes too)]
+
+
+.bottom[.smaller-x[
+From https://github.com/benbovy/geopython2023-spherely
+]]
+
+
+---
+
+# s2geometry (C++)
+
+- s2geometry (<https://s2geometry.io>) is an open-source spherical geometry engine and indexing system created and supported by Google
+- The R package **s2** provides flexible R bindings for s2geometry using an interface similar to PostGIS and BigQuery Geography
+- As of **sf** version 1.0.0, s2geometry is the default engine for geodetic coordinates
+- The **s2geography** C++ package provides a compatibility layer on top of s2geometry providing a simple features API
+- The new **spherely** package starts bindings to s2geometry through s2geography
+
+---
+
+# S2Geography (C++)
+
+.center.width-90[![](./img/s2geography_readme.png)]
+
+https://github.com/paleolimbot/s2geography
+
+---
+
+# Spherely (Python bindings)
+
+.center.width-80[![](./img/spherely_readme.png)]
+
+https://github.com/benbovy/spherely
+
+???
+
+# Spherely (Python bindings)
+
+.center[![:scale 65%](./img/spherely_readme.png)]
+
+https://github.com/benbovy/spherely
+
+---
+class: inverse, center, middle
+
+# Spherely: like shapely, but on the sphere!
+
+---
+
+# Spherely's main features
+
+- S2Geography (S2Geometry) Python bindings built with PyBind11
+- Python / NumPy vectorized interface like Shapely 2.0
+- Follow Shapely's API
+
+.smaller-x[
+```python
+import numpy as np
+import shapely
+
+arr = np.array([
+    shapely.LineString([(5000, 500), (5000, 700)]),
+    shapely.LineString([(4500, 600), (5500, 600)]),
+    shapely.LineString([(5000, 500), (4500, 200)]),
+])
+
+arr.dtype is np.dtype("O")
+# True
+
+isinstance(arr[0], shapely.Geometry)
+# True
+
+shapely.intersects(arr, shapely.Point(5000, 500))
+# array([ True, False,  True])
+```
+]
+
+---
+
+# Spherely's main features
+
+- S2Geography (S2Geometry) Python bindings built with PyBind11
+- Python / NumPy vectorized interface like Shapely 2.0
+- Follow Shapely's API
+
+.smaller-x[
+```python
+import numpy as np
+*import spherely
+
+arr = np.array([
+    spherely.create_linestring([(50, 5), (50, 7)]),
+    spherely.create_linestring([(45, 6), (55, 6)]),
+    spherely.create_linestring([(50, 5), (45, 2)]),
+])
+
+arr.dtype is np.dtype("O")
+# True
+
+isinstance(arr[0], spherely.Geography)
+# True
+
+spherely.intersects(arr, spherely.create_point(50, 5))
+# array([ True, False,  True])
+```
+]
+
+---
+
+# Still early stage of development
+
+The basic features are implemented in spherely 0.1.0:
+
+- All geometry types (points, linestrings, polygons, etc) and basic creation functions
+- Import from / export to WKT, WKB, GeoArrow
+- Basic measurement functions: area, distance, length, perimeter
+- Predicates: contains, within, intersects, equals, etc
+- Overlays: union, intersection, difference, symmetric difference
+- A few constructive operations: centroid, boundary, convex_hull
+
+Full API reference: https://spherely.readthedocs.io/en/latest/api.html
+
+---
+
+# Still early stage of development
+
+What is not yet implemented or work-in-progress, but we want to have:
+
+- More functions: buffer, distance within, unary union, bounds, project/interpolate
+- Making better use of spatial indexing (e.g. faster spatial join)
+- S2 cell utilities
+- ...
+---
+count: false
+
+# Still early stage of development
+
+What is not yet implemented or work-in-progress, but we want to have:
+
+- More functions: buffer, distance within, unary union, bounds, project/interpolate
+- Making better use of spatial indexing (e.g. faster spatial join)
+- S2 cell utilities
+- Integration with the Python geospatial ecosystem
+  - GeoPandas backend .logo-small[![](./figs/geopandas_logo.png)]
+  - Xvec (Xarray vector data cubes) .logo-small[![](./figs/xvec_logo.svg)]
+
+
+---
+
+## Example: point-in-polygon with South Pole
+
+.abs-layout.top-20.left-65[
+  ![:scale 100%](img/illustration-pole-polygon-3.svg)
+]
+
+```python
+>>> import shapely
+
+>>> polygon = shapely.from_wkt(
+...     "POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))"
+... )
+>>> pole = shapely.Point(0, -90)
+
+>>> shapely.contains(polygon, pole)
+False
+```
+
+--
+count: false
+
+With Spherely:
+
+```python
+>>> import spherely
+
+>>> polygon = spherely.from_wkt(
+...     "POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))"
+... )
+>>> pole = spherely.make_point(-90, 0)
+
+>>> spherely.contains(polygon, pole)
+True
+```
+
+---
+
+# Example: area calculation
+
+
+
+
+---
+class: inverse
+
+# Demo using Fused
+
+
+---
+
+# Example: area calculation
+
+```python
+# Calculating the area using shapely by reprojecting to UTM first
+>>> geoms_utm = gdf.geometry.to_crs(gdf.estimate_utm_crs())
+>>> area_utm = geoms_utm.area
+
+# Calculating the area using spherely
+>>> area_spherical = spherely.area(geogs)
+
+# Calculating the geodesic area using pyproj (ellipsoid model)
+>>> from pyproj import Geod
+>>> geod = Geod(ellps="WGS84")
+>>> area_geod = [geod.geometry_area_perimeter(pol)[0] for pol in gdf.geometry]
+```
+
+Distance calculations on the sphere: accuracy within ~0.5%
+
+Area calculations (example above) with local UTM zone is a bit more accurate compared to spherely,
+but only if your data fits in one zone.
+
+---
+
+# Example: area calculation
+
+Benchmark: ~6 million buildings in Flanders, Belgium (Overture data)
+
+.center[![:scale 65%](./img/benchmark-area.svg)]
+
+---
+
+# Integration with GeoPandas 🚧
+
+[Demo notebook](geopandas-spherely.ipynb)
+
+--
+
+This is early Work-in-Progress! (only a PR for now)
+
+???
+
+
+# Getting data into Spherely
+
+
+# Challenges
+
+- Spherical geometry ≠ planar geometry
+  - Validation of geographic features (partially solved in s2geography?)
+  - API compatibility with Shapely
+  - [Dewey Dunnington & Edzer Pebesma FOSS4G 2021 talk](https://www.youtube.com/watch?v=zqRhF2XM1CE)
+- Technical challenges
+  - Using Pybind11 for Python bindings works great in general, but...
+  - Python ↔ C++ conversion overhead! (some hacks used)
+  - Some more hacks used to support `pybind11::vectorize` with Numpy's `object`
+    dtype
+  - No fine-grained control on releasing the GIL (e.g., inside
+    `pybind11:vectorize` when a new array of `Geography` objects is returned or
+    when checking the type of the array element)
+
+
+???
+
+# Using Pybind11
+
+Efficient! .smaller-x[(quick & naive benchmark for trivial operations)]
+
+.center.width-75[![](./figs/spherely_benchmark_trivial.png)]
+
+
+# What's next? .smaller-x[(contributions are welcome!)]
+
+- More features!
+  - `Geography` subclasses (`Polygon`, `MultiXXX`, `GeographyCollection`)
+  - S2Geography bindings (I/O, predicates, measurement, etc.)
+  - Other...
+- Packaging (all platforms)
+.logo-small[![](./figs/conda-forge_logo.png)].logo-small[![](./figs/pypi_logo.svg)]
+  - Conda-forge: s2geometry ✅, s2geography ✅, spherely ❌
+  - PyPi (wheels)
+- Documentation
+- Integration with the Python geospatial ecosystem
+  - GeoPandas backend .logo-small[![](./figs/geopandas_logo.png)]
+  - Xvec (Xarray vector data cubes) .logo-small[![](./figs/xvec_logo.svg)]
+
+
+---
+
+# Getting started
+
+Install:
+
+```bash
+pip install spherely
+# or
+mamba install spherely -c conda-forge
+```
+
+Documentation: https://spherely.readthedocs.io/en/latest/
+
+Issues: https://github.com/benbovy/spherely
+
+.bottom[
+## Contributions very welcome!
+]
+
+---
+
+# Thanks to
+
+<img style="position: absolute; top: 60px; right: 60px; width:30%" src="./img/numfocus_logo.png">
+<div style="margin-bottom:-20px"></div>
+
+Spherely author: .smaller-x[Benoît Bovy]
+<div style="margin-bottom:-20px"></div>
+
+.width-10.circle[![](./img/me.jpg)]
+<div style="margin-bottom:-10px"></div>
+
+GeoPandas maintainers: .smaller-x[Joris Van den Bossche, Martin Fleischmann, Brendan Ward]
+<div style="margin-bottom:-20px"></div>
+
+.width-10.circle[![](./img/gh_jorisvandenbossche.png)]
+.width-10.circle[![](./img/gh_martinfleis.png)]
+.width-10.circle[![](./img/gh_brendan-ward.jpg)]
+<div style="margin-bottom:-10px"></div>
+
+R-Spatial maintainers: .smaller-x[Dewey Dunnington, Edzer Pebesma]
+<div style="margin-bottom:-20px"></div>
+
+.width-10.circle[![](./img/gh_paleolimbot.jpg)]
+.width-10.circle[![](./img/gh_edzer.jpg)]
+<div style="margin-bottom:-10px"></div>
+
+S2Geometry maintainers
+
+---
+
+## Thanks for the attention! Questions?
+
+
+Those slides:
+
+- https://github.com/jorisvandenbossche/talks/
+- http://jorisvandenbossche.github.io/talks/2025_GeoPython_spherely
+
+Spherely:
+
+* `pip install spherely` / `conda/mamba install spherely -c conda-forge`
+* https://github.com/benbovy/spherely
+
+<div style="margin-bottom:40px"></div>
+
+
+.center[
+<a href="https://fosstodon.org/@jorisvandenbossche" style="color: var(--primary)"><img src="img/mastodon-svgrepo-com.svg" alt="Twitter logo" class="icon"> fosstodon.org/@jorisvandenbossche</a>
+<a href="https://github.com/jorisvandenbossche" style="color: var(--primary)"><img src="img/icon_github.svg" alt="Github logo"  class="icon"> github.com/jorisvandenbossche</a>
+]
+
+<div style="margin-bottom:40px"></div>
+
+
+.center[
+![:scale 30%](img/Symbol-text-white-bg-transparent.svg)
+]
+
+    </textarea>
+<!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>-->
+    <script src="../remark.min.js" type="text/javascript">
+    </script>
+    <script>
+	    remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+      };
+      remark.macros.scaleH = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="height: ' + percentage + '" />';
+      };
+      config_remark = {
+        highlightStyle: 'github',
+        highlightSpans: true,
+        highlightLines: true,
+        ratio: "16:9",
+      };
+      var slideshow = remark.create(config_remark);
+    </script>
+  </body>
+</html>

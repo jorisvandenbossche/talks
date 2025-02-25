@@ -37,3 +37,6 @@ GeoPython 2023 - Shapely 2.0 slides: https://jorisvandenbossche.github.io/talks/
 PyData Amsterdam 2023 - What the PDEP? An overview of some upcoming pandas changes: https://jorisvandenbossche.github.io/2023_PyDataAmsterdam_pandas-pdeps/#1
 
 PyData Paris 2024 - The expanding Apache Arrow universe - standardizing and accelerating tabular data access and interchange: https://jorisvandenbossche.github.io/2024_PyDataParis_Arrow/#1
+
+
+GeoPython 2025 - Introducing Spherely: https://jorisvandenbossche.github.io/2025_GeoPython_spherely/#1
