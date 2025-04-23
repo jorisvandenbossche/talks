@@ -39,4 +39,4 @@ PyData Amsterdam 2023 - What the PDEP? An overview of some upcoming pandas chang
 PyData Paris 2024 - The expanding Apache Arrow universe - standardizing and accelerating tabular data access and interchange: https://jorisvandenbossche.github.io/talks/2024_PyDataParis_Arrow/#1
 
 
-GeoPython 2025 - The earth is no longer flat! - Introducing Spherely: https://jorisvandenbossche.github.io/talks/2025_GeoPython_spherely/#1
+PyCon DE 2025 - The earth is no longer flat! - Introducing Spherely: https://jorisvandenbossche.github.io/talks/2025_PyConDE_spherely/#1
