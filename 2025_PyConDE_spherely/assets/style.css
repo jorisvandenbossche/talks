@@ -1,0 +1,506 @@
+@import url(https://fonts.googleapis.com/css?family=Fira+Sans:300,300i,400,400i,500,500i,700,700i);
+@import url(https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css);
+
+/* Color palette (https://paletton.com) */
+
+:root {
+  --rm-primary-dark-x: #0D1724;
+  --rm-primary-dark: ##17202C;
+  --rm-primary: #22272E;
+  --rm-primary-light: #414955;
+  --rm-primary-light-x: #5C6673;
+  --rm-secondary-dark-x: #306088;
+  --rm-secondary-dark: #4B799F;
+  --rm-secondary: #729CBE;
+  --rm-secondary-light: #A2C1DC;
+  --rm-secondary-light-x: #D4E4F2;
+  --rm-secondary2-dark-x: #C19C1C;
+  --rm-secondary2-dark: #E4BF3F;
+  --rm-secondary2: #FFDD66;
+  --rm-secondary2-light: #FFE58A;
+  --rm-secondary2-light-x: #FFEEB5;
+  --rm-complementary-dark-x: #725329;
+  --rm-complementary-dark: #8A6F4A;
+  --rm-complementary: #AD916B;
+  --rm-complementary-light: #D0B898;
+  --rm-complementary-light-x: #FBEAD4;
+  --rm-strong: #9B2E00;
+}
+
+
+body {
+    font-family:  'Fira Sans', 'Trebuchet MS', 'Segoe UI', sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    color: var(--rm-primary-dark);
+    line-height: 1.4;
+    font-size: 10.5pt;
+    word-wrap: break-word;
+}
+
+
+/* Remark */
+
+.remark-container {
+    background: #eee;
+}
+
+.remark-slide-content {
+    font-size: 1.4em;
+
+}
+
+.remark-slide-content h1 {
+    font-weight: bold;
+    font-size: 2.1em;
+    margin: 0 0 .5em 0;
+    color: var(--rm-primary);
+}
+
+.remark-slide-content h2 {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 0 0 .5em 0;
+}
+
+.remark-slide-content h3 {
+    font-size: 1.0em;
+    font-weight: normal;
+    margin: 0 0 .5em 0;
+}
+
+.remark-slide-number {
+    font-size: 0.5em;
+    bottom: 2em;
+}
+
+
+/* Styles */
+
+.footnote:before {
+    content: "\2015";
+    display: block;
+}
+
+a {
+    color: var(--rm-secondary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+em {
+    color: #0288d1;
+    font-style: normal;
+}
+
+.strong {
+    color: var(--rm-secondary2-dark-x);
+    font-style: normal;
+    font-weight: normal;
+}
+
+.highlight{ 
+    background-color: #FFFF00; 
+}
+
+.smaller {
+    font-size: 1.2em;
+}
+
+.smaller-x {
+    font-size: 0.8em;
+}
+
+.smaller-xx {
+    font-size: 0.7em;
+}
+
+.smaller-xxx {
+    font-size: 0.5em;
+}
+
+.larger {
+    font-size: 1.5em;
+}
+
+.larger-x {
+    font-size: 1.8em;
+}
+
+.larger-xx {
+    font-size: 2.1em;
+}
+
+.katex {
+    color: var(--rm-complementary-dark);
+}
+
+.black-slide .katex, .black-slide h1 {
+    color: white;
+}
+
+.black-slide a, .black-slide .footnote a {
+    color: #89c2ce;
+}
+
+.remark-code, .remark-inline-code {
+    font-family: 'Fira Code', 'Lucida Console', Monaco, monospace;
+    font-size: 0.9em;
+}
+
+ul > li, ol > li {
+     margin: 0.6em 0;
+}
+
+ul > li > ul > li {
+    font-size: 0.8em;
+}
+
+table {
+    border-spacing: 0;
+    border: 1px solid #e2e2e2;
+    font-size: .8em;
+    margin: auto;
+    padding: 0;
+}
+
+thead {
+    border: 0;
+    margin: 0;
+}
+
+th {
+    background: #e2e2e2;
+    border: 0;
+    font-weight: bold;
+    margin: 0;
+    padding: 7px 0;
+    text-align: center;
+}
+
+tbody {
+    background: white;
+    font-size: .8em;
+    margin: 0;
+}
+
+tr {
+    margin: 0;
+    padding: 0;
+}
+
+tr:nth-child(odd) {
+    background: #fcfcfc;
+}
+
+td {
+    margin: 0;
+    padding: 5px 8px;
+}
+
+.caption {
+    display: block;
+    text-align: center;
+    font-size: 0.8em;
+    font-style: italic;
+}
+
+.circle img {
+    border-radius: 50%;
+}
+
+.stretch img {
+    width: 100%;
+    height: auto;
+}
+
+.solid {
+  border-style: solid;
+}
+
+.dashed {
+  border-style: dashed;
+}
+
+.footnote-faces {
+    position: absolute;
+    bottom: 1em;
+}
+
+.footnote {
+  position: absolute;
+  bottom: 2em;
+  font-size: 0.5em;
+  opacity: 0.75;
+  margin-left: -5.5em;
+}
+
+.footnote a{
+    color: #0288d1; /*#20707e;*/
+}
+
+.inactive {
+    color: lightgray;
+}
+
+.alert {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 2px solid #f5c6cb;
+    border-radius: 5px;
+    width: 95%;
+    display: block;
+    padding: 1em;
+}
+
+
+/* Placement */
+
+.middle {
+    vertical-align: bottom;
+}
+
+.cols {
+    display: flex;
+}
+
+.flex20 {
+    flex: 20%;
+}
+
+.flex30 {
+    flex: 30%;
+}
+
+.flex40 {
+    flex: 40%;
+}
+
+.flex50 {
+    flex: 50%;
+}
+
+.flex60 {
+    flex: 60%;
+}
+
+.flex70 {
+    flex: 70%;
+}
+
+.flex80 {
+    flex: 80%;
+}
+
+.pull-left {
+    float: left;
+    margin-right: 1em;
+}
+
+.pull-right {
+    float: right;
+    margin-left: 1em;
+}
+
+.width-5 * {
+    width: 5%;
+}
+
+.width-10 * {
+    width: 10%;
+}
+
+.width-15 * {
+    width: 15%;
+}
+
+.width-20 * {
+    width: 20%;
+}
+
+.width-25 * {
+    width: 25%;
+}
+
+.width-30 * {
+    width: 30%;
+}
+
+.width-35 * {
+    width: 35%;
+}
+
+.width-40 * {
+    width: 40%;
+}
+
+.width-45 * {
+    width: 45%;
+}
+
+.width-50 * {
+    width: 50%;
+}
+
+.width-55 * {
+    width: 55%;
+}
+
+.width-60 * {
+    width: 60%;
+}
+
+.width-65 * {
+    width: 65%;
+}
+
+.width-70 * {
+    width: 70%;
+}
+
+.width-75 * {
+    width: 75%;
+}
+
+.width-80 * {
+    width: 80%;
+}
+
+.width-85 * {
+    width: 85%;
+}
+
+.width-90 * {
+    width: 90%;
+}
+
+.width-95 * {
+    width: 95%;
+}
+
+.width-100 * {
+    width: 100%;
+}
+
+.width-105 * {
+    width: 105%;
+}
+
+.width-110 * {
+    width: 110%;
+}
+
+.width-115 * {
+    width: 115%;
+}
+
+.width-120 * {
+    width: 120%;
+}
+
+.width-125 * {
+    width: 125%;
+}
+
+.width-130 * {
+    width: 130%;
+}
+
+.width-135 * {
+    width: 135%;
+}
+
+.width-140 * {
+    width: 140%;
+}
+
+.width-145 * {
+    width: 145%;
+}
+
+.width-150 * {
+    width: 150%;
+}
+
+.width-155 * {
+    width: 155%;
+}
+
+.width-160 * {
+    width: 160%;
+}
+
+.width-165 * {
+    width: 165%;
+}
+
+.width-170 * {
+    width: 170%;
+}
+
+.width-175 * {
+    width: 175%;
+}
+
+.width-180 * {
+    width: 180%;
+}
+
+.width-185 * {
+    width: 185%;
+}
+
+.width-190 * {
+    width: 190%;
+}
+
+.width-195 * {
+    width: 195%;
+}
+
+.width-200 * {
+    width: 200%;
+}
+
+.height-25 * {
+    height: 25%;
+}
+
+.logo-small img {
+    margin-right: 10px;
+    height: 70px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+
+/* Specials */
+
+.title-slide, .section {
+    vertical-align: middle;
+    background-color: var(--rm-primary);
+    color: var(--rm-secondary);
+}
+
+.title-slide h1, .section h1 {
+    color: var(--rm-secondary);
+}
+
+.dark-slide {
+    background-color: var(--rm-primary);
+    color: var(--rm-secondary);
+}
+
+.dark-slide h1 {
+    color: var(--rm-complementary-light);
+    font-weight: normal;
+}
