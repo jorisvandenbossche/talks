@@ -46,15 +46,16 @@ https://github.com/jorisvandenbossche/talks/
 <img style="width: 200px; float: left; margin-right: 50px;" src="img/joris.png" />
 
 - Background: PhD bio-science engineer, air quality research
-- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, Apache Arrow (pyarrow), ...
-- Currently working as a software engineer at Fused
+- Open source enthusiast: core developer of pandas, GeoPandas, Shapely, pyogrio, Apache Arrow (pyarrow), ...
+- Freelancer, part-time supported by a Sovereign Tech Fellowship
 
 <div style="margin-bottom:0px; clear: both"></div>
 
 .center[
 .affiliations[
-  ![:scale 50%](img/geopandas_logo.svg)
-  ![:scale 35%](img/arrow-logo_horizontal_black-txt_transparent-bg.svg)
+  ![:scale 40%](img/geopandas_logo.svg)
+  ![:scale 30%](img/arrow-logo_horizontal_black-txt_transparent-bg.svg)
+  <img src="img/sovereign-tech-agency.png" style="vertical-align: baseline; width: 15%;" />
 ]
 ]
 
@@ -66,38 +67,7 @@ https://github.com/jorisvandenbossche/talks/
 ]
 
 .abs-layout.top-10.left-70[
-  ![:scale 100%](img/Symbol-text-white-bg-transparent.svg)
-]
 
----
-class: inverse
-
-# Fused
-
-### Build with data, instantly.
-
-* Serverless Python at scale
-  * Use the Python stack you are familiar with
-  * Call from anywhere (Python, HTTP, ...)
-  * Parallel processing and caching
-
-* Geospatial focus
-  * Ingest data into Cloud Native formats
-  * Integrate with maps and web apps
-
-.abs-layout.top-10.left-80[
-  ![:scale 200%](img/Symbol-black-bg-transparent.svg)
-]
-
-.abs-layout.top-37.left-57[
-  ![:scale 90%](img/fused-workbench.png)
-]
-
---
-count: false
-
-.center[
-## https://fused.io - We are hiring!
 ]
 
 ---
@@ -106,7 +76,7 @@ class: center, middle
 
 # Your data is this:
 
-### longitude: 7.59..., latitude: 47.56...
+### longitude: 4.347..., latitude: 50.866...
 
 
 .bottom[.smaller-x[
@@ -114,10 +84,12 @@ From https://dewey.dunnington.ca/slides/s22021/
 ]]
 ---
 class:
-# ...but the world is not this:
+# ... but the world is not this:
 
 .center[
 ![:scale 80%](img/illustration-world-flat.svg)
+<br>
+Longitude / latitude values directly mapped as cartesian coordinates (Plate Carrée projection)
 ]
 
 .bottom[.smaller-x[
@@ -126,17 +98,39 @@ From https://dewey.dunnington.ca/slides/s22021/
 
 
 ---
-class: inverse, center
-
-# it's this:
+class:
+# ... and not this:
 
 .center[
-![:scale 70%](img/countries-round-.gif)
+![:scale 80%](img/illustration-world-flat-equal-earth.svg)
+<br>
+Equal Earth projection
 ]
 
 .bottom[.smaller-x[
 From https://dewey.dunnington.ca/slides/s22021/
 ]]
+
+
+
+---
+class: center
+
+# it's this:
+
+.center[
+![:scale 30%](img/illustration-world-sphere.gif)
+]
+
+.bottom[.smaller-x[
+From https://dewey.dunnington.ca/slides/s22021/
+]]
+
+
+---
+
+# GIS tools with geographical coordinates
+
 
 
 ---
@@ -154,6 +148,9 @@ From https://dewey.dunnington.ca/slides/s22021/
 2      POLYGON ((-45.01324 -77.05713, -44.918 -77.075..
 ...
 ```
+
+
+
 
 ---
 
@@ -289,7 +286,7 @@ From https://r-spatial.org/r/2020/06/17/s2.html
 .center.larger.bold[NO!]
 ]
 .flex50[
-.center.larger.bold[YES!]
+.center.larger.bold[YES! .smaller-x.font-weight-normal[(approximately)]]
 ]
 ]
 
@@ -300,6 +297,52 @@ From https://r-spatial.org/r/2020/06/17/s2.html
 .bottom[.smaller-x[
 From https://github.com/benbovy/geopython2023-spherely
 ]]
+
+
+---
+
+# GIS tools with geographical data
+
+**PostGIS (PostgreSQL)**
+
+- Has a `geography` type (in addition to standard `geometry` type)
+- Supports a subset of `ST_..` functions
+- Distance and area based on ellipsoid, others use a mix of ellipsoid and spherical calculations
+- Buffer and intersection using re-projection under the hood
+- https://postgis.net/docs/manual-3.6/using_postgis_dbmanagement.html#PostGIS_Geography
+
+---
+
+# GIS tools with geographical data
+
+**PostGIS (PostgreSQL)**
+
+**QGIS**
+
+- Uses ellipsoid for distance and area calculations in case of a geographical CRS, planar calculations for other vector processing tools?
+
+
+---
+
+# GIS tools with geographical data
+
+**PostGIS (PostgreSQL)**
+
+**QGIS**
+
+**GeoPandas, duckdb-spatial, ..**
+
+- The `geometry` type only does planar calculations
+
+
+---
+
+# GIS tools with full spherical support
+
+**Google BigQuery Geography**
+
+- Only has a `GEOGRAPHY` type with full support based on spherical calculations
+- Not open-source, but using Google's open-source `s2geometry` library under the hood
 
 
 ---
@@ -319,6 +362,61 @@ From https://github.com/benbovy/geopython2023-spherely
 .center.width-90[![](./img/s2geography_readme.png)]
 
 https://github.com/paleolimbot/s2geography
+
+
+---
+
+# GIS tools with full spherical support
+
+Using `s2geometry`/`s2geography` under the hood:
+
+**R sf (s2)**
+
+- As of `sf` version 1.0.0 (2021), `s2` is the default engine for geographic coordinates
+- https://r-spatial.org/r/2020/06/17/s2.html#sf-10-goodbye-flat-earth-welcome-s2-spherical-geometry
+
+---
+
+# GIS tools with full spherical support
+
+Using `s2geometry`/`s2geography` under the hood:
+
+**R sf (s2)**
+
+**duckdb-geography extension**
+
+- https://duckdb.org/community_extensions/extensions/geography
+
+
+---
+
+# GIS tools with full spherical support
+
+Using `s2geometry`/`s2geography` under the hood:
+
+**R sf (s2)**
+
+**duckdb-geography extension**
+
+**SedonaDB (Apache Sedona)**
+
+- https://sedona.apache.org/latest/blog/2026/06/19/sedonadb-040-release/#geography-support
+- Includes Python bindings
+
+---
+
+# GIS tools with full spherical support
+
+Using `s2geometry`/`s2geography` under the hood:
+
+**R sf (s2)**
+
+**duckdb-geography extension**
+
+**SedonaDB (Apache Sedona)**
+
+**Spherely (Python bindings) - WIP**
+
 
 ---
 
@@ -445,13 +543,12 @@ What is not yet implemented or work-in-progress, but we want to have:
 
 ## Example: point-in-polygon with South Pole
 
-.abs-layout.top-20.left-65[
-  ![:scale 100%](img/illustration-pole-polygon-3.svg)
+.abs-layout.top-20.left-70[
+  ![:scale 80%](img/illustration-pole-polygon-3.svg)
 ]
 
 ```python
 >>> import shapely
-
 >>> polygon = shapely.from_wkt(
 ...     "POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))"
 ... )
@@ -468,7 +565,6 @@ With Spherely:
 
 ```python
 >>> import spherely
-
 >>> polygon = spherely.from_wkt(
 ...     "POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))"
 ... )
@@ -477,19 +573,6 @@ With Spherely:
 >>> spherely.contains(polygon, pole)
 True
 ```
-
----
-
-# Example: area calculation
-
-
-
-
----
-class: inverse
-
-# Demo using Fused
-
 
 ---
 
@@ -637,12 +720,14 @@ S2Geometry maintainers
 Those slides:
 
 - https://github.com/jorisvandenbossche/talks/
-- http://jorisvandenbossche.github.io/talks/2025_PyConDE_spherely
+- http://jorisvandenbossche.github.io/talks/2026_FOSS4GBE_spherical_geometries
 
 Spherely:
 
 * `pip install spherely` / `conda/mamba install spherely -c conda-forge`
 * https://github.com/benbovy/spherely
+
+But also check out: R s2, duckdb-geography, SedonaDB geography
 
 <div style="margin-bottom:40px"></div>
 
@@ -654,10 +739,6 @@ Spherely:
 
 <div style="margin-bottom:40px"></div>
 
-
-.center[
-![:scale 30%](img/Symbol-text-white-bg-transparent.svg)
-]
 
     </textarea>
 <!--    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
