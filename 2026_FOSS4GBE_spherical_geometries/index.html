@@ -208,6 +208,7 @@ Example: Fiji - planar bounding box
 ]
 
 ---
+count: false
 
 ## Great circles: shortest path on the sphere
 
@@ -245,6 +246,8 @@ From https://r-spatial.org/r/2020/06/17/s2.html
 
 
 ---
+count: false
+
 # Polygon edges
 
 .center[
@@ -323,7 +326,6 @@ From https://github.com/benbovy/geopython2023-spherely
 
 # GeoPandas with geographical data
 
-
 ```python
 >>> land = geopandas.read_file(geodatasets.get_path("naturalearth.land"))
 >>> land.geometry.buffer(1)
@@ -335,12 +337,40 @@ From https://github.com/benbovy/geopython2023-spherely
 ...
 ```
 
+---
+count: false
+
+# GeoPandas with geographical data
+
+```python
+>>> land = geopandas.read_file(geodatasets.get_path("naturalearth.land"))
+>>> land.geometry.buffer(1)
+*UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect.
+*Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+0      POLYGON ((-66.42576 -81.31759, -66.7624 -81.13...
+1      POLYGON ((-163.65367 -79.70714, -164.10358 -79...
+2      POLYGON ((-45.01324 -77.05713, -44.918 -77.075..
+...
+>>> land.distance(shapely.Point(4.34, 50.86))
+*UserWarning: Geometry is in a geographic CRS. Results from 'distance' are likely incorrect.
+*Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+0      145.669532
+1      209.077586
+2      138.048732
+...
+```
+
+--
+count: false
+
+But distance/area on the ellipsoid coming in the next release! 🚧
 
 ---
 
 # GIS tools with full spherical support
 
 --
+count: false
 
 **Google BigQuery Geography**
 
@@ -645,7 +675,6 @@ Benchmark: ~6 million buildings in Flanders, Belgium
 ]
 
 ---
-count:false
 
 # Caveats
 
@@ -657,7 +686,7 @@ count:false
 ]
 
 ---
-count:false
+count: false
 
 # Caveats
 
@@ -670,7 +699,6 @@ count:false
 
 
 ---
-count:false
 
 # Caveats
 
@@ -699,9 +727,10 @@ count:false
 
 # Integration with GeoPandas 🚧
 
-[Demo notebook](geopandas-spherely.ipynb)
+[Demo notebook](https://github.com/jorisvandenbossche/talks/blob/master/2026_FOSS4GBE_spherical_geometries/geopandas-spherely.ipynb)
 
 --
+count: false
 
 This is early Work-in-Progress! (only a PR for now)
 
