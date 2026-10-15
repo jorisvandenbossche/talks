@@ -23,10 +23,10 @@
   <body>
     <textarea id="source">
 
-class: center, middle, inverse
+class: center, middle
 
 .center[
-![:scale 40%](img/countries-round-.gif)
+![:scale 20%](img/illustration-world-sphere.gif)
 ]
 
 # The earth is not flat!
@@ -129,32 +129,15 @@ From https://dewey.dunnington.ca/slides/s22021/
 
 ---
 
-# GIS tools with geographical coordinates
+# GIS tools with geographical data
 
+Many tools work (best) on the cartesian plane, assuming projected coordinates
 
-
----
-
-# GeoPandas with geographical coordinates
-
-
-```python
->>> land = geopandas.read_file(geodatasets.get_path("naturalearth.land"))
->>> land.geometry.buffer(1)
-*UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect.
-*Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
-0      POLYGON ((-66.42576 -81.31759, -66.7624 -81.13...
-1      POLYGON ((-163.65367 -79.70714, -164.10358 -79...
-2      POLYGON ((-45.01324 -77.05713, -44.918 -77.075..
-...
-```
-
-
-
+For example: QGIS, PostGIS geometry, duckdb geometry, GeoPandas, ...
 
 ---
 
-# GeoPandas with projected coordinates
+# GIS tools with projected coordinates
 
 Use a suitable projected CRS for your study area.
 
@@ -173,8 +156,9 @@ For example, in Belgium we have Belgian Lambert 72, a.k.a. EPSG:31370)
   - choose a coordinate system depending on location, extent, etc.
   - may be computationally expensive
 - boundary singularities, distortion.
+- global data
 
-<div style="margin-bottom:-30px"></div>
+<div style="margin-bottom:-70px"></div>
 
 .center[![:scale 50%](./img/mercator_projection_area.gif)]
 
@@ -337,7 +321,26 @@ From https://github.com/benbovy/geopython2023-spherely
 
 ---
 
+# GeoPandas with geographical data
+
+
+```python
+>>> land = geopandas.read_file(geodatasets.get_path("naturalearth.land"))
+>>> land.geometry.buffer(1)
+*UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect.
+*Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.
+0      POLYGON ((-66.42576 -81.31759, -66.7624 -81.13...
+1      POLYGON ((-163.65367 -79.70714, -164.10358 -79...
+2      POLYGON ((-45.01324 -77.05713, -44.918 -77.075..
+...
+```
+
+
+---
+
 # GIS tools with full spherical support
+
+--
 
 **Google BigQuery Geography**
 
@@ -562,7 +565,7 @@ False
 count: false
 
 With Spherely:
-
+<div style="margin-bottom:-15px"></div>
 ```python
 >>> import spherely
 >>> polygon = spherely.from_wkt(
@@ -572,6 +575,30 @@ With Spherely:
 
 >>> spherely.contains(polygon, pole)
 True
+```
+
+---
+
+## Example: point-in-polygon with South Pole
+
+Or with duckdb-geography
+<div style="margin-bottom:-15px"></div>
+```sql
+LOAD geography;
+
+SELECT s2_contains(
+    'POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))'::GEOGRAPHY,
+    'POINT (0 -90)'::GEOGRAPHY
+) 
+```
+
+Or SedondaDB:
+<div style="margin-bottom:-15px"></div>
+```sql
+SELECT ST_Contains(
+    ST_GeogFromWKT('POLYGON((-150 -65, 0 -62, 120 -78, -150 -65))'),
+    ST_GeogFromWKT('POINT (0 -90)')
+)
 ```
 
 ---
@@ -601,9 +628,72 @@ but only if your data fits in one zone.
 
 # Example: area calculation
 
-Benchmark: ~6 million buildings in Flanders, Belgium (Overture data)
+Benchmark: ~6 million buildings in Flanders, Belgium
 
 .center[![:scale 65%](./img/benchmark-area.svg)]
+
+---
+
+# Caveats
+
+- Geodesic edges vs many datasets assuming planar edges
+  - This can impact validity of the geometries 
+  - This can impact the actual interpretation with long edges (e.g. US border)
+
+.center[
+  ![:scale 35%](img/illustration-pole-polygon-3.svg)
+]
+
+---
+count:false
+
+# Caveats
+
+- Geodesic edges vs many datasets assuming planar edges
+- Lines: shortest path on the sphere
+
+.center[
+  ![:scale 60%](img/illustration-shortest-line.svg)
+]
+
+---
+count:false
+
+# Caveats
+
+- Geodesic edges vs many datasets assuming planar edges
+- Lines: shortest path on the sphere
+
+.center[
+  ![:scale 60%](img/illustration-shortest-line-2.svg)
+]
+
+
+---
+count:false
+
+# Caveats
+
+- Geodesic edges vs many datasets assuming planar edges
+- Lines: shortest path on the sphere
+- Polygons: smallest area vs ring orientation
+
+.center[
+  ![:scale 60%](img/illustration-smallest-polygon.svg)
+]
+
+---
+count:false
+
+# Caveats
+
+- Geodesic edges vs many datasets assuming planar edges
+- Lines: shortest path on the sphere
+- Polygons: smallest area vs ring orientation
+
+.center[
+  ![:scale 60%](img/illustration-smallest-polygon-2.svg)
+]
 
 ---
 
